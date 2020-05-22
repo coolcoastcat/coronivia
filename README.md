@@ -43,6 +43,10 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
 ## Code of Conduct
 [Contributor Covenant Code of Conduct](/code_of_conduct.md)
 
+## License 
+[![Creative Commons License](https://i.creativecommons.org/l/by-sa/4.0/88x31.png)](http://creativecommons.org/licenses/by-sa/4.0/)  
+This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
+
 ## Attribution
 This application leverages the following projects:
 * [The Open Trivia Database](https://opentdb.com/)
