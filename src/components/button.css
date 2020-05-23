@@ -1,0 +1,79 @@
+:root {
+    --primary: #cccccc;
+    --warning: #ffd028;
+    --danger: #eb3f27;
+    --success: #75fa83;
+    --white: #fdfdfd;
+    --dark: #181717;
+}
+.btn {
+    font-family:"Chelsea Market", sans-serif;
+    font-weight: 400;
+    border-radius: 10;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.btn:hover {
+    transform: translateY(-3px);
+}
+
+/* Button Colors and Styles */
+.btn--primary--solid{
+    background-color: var(--primary);
+    color: var(--dark);
+    border: none;
+}
+
+.btn--warning--solid{
+    background-color: var(--warning);
+    color: var(--white);
+    border: none;
+}
+
+.btn--danger--solid{
+    background-color: var(--danger);
+    color: var(--white);
+    border: none;
+}
+
+.btn--success--solid{
+    background-color: var(--success);
+    color: var(--dark);
+    border: none;
+}
+
+.btn--primary--outline{
+    background-color: transparent;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+}
+.btn--warning--outline{
+    background-color: transparent;
+    border: 2px solid var(--warning);
+    color: var(--warning);
+}
+.btn--danger--outline{
+    background-color: transparent;
+    border: 2px solid var(--danger);
+    color: var(--danger);
+}
+.btn--success--outline{
+    background-color: transparent;
+    border: 2px solid var(--success);
+    color: var(--success);
+}
+
+/* Button sizes */
+.btn--small {
+    padding: 5px 10px;
+    font-size:14px;
+}
+.btn--medium {
+    padding: 10px 20px;
+    font-size:22px;
+}
+.btn--large {
+    padding: 15px 30px;
+    font-size:24px;
+}
