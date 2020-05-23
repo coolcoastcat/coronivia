@@ -11,7 +11,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .App-logo {
-    animation: App-logo-spin infinite 20s linear;
+    animation: App-logo-spin 1 5s linear;
   }
 }
 
@@ -39,5 +39,20 @@
     transform: rotate(360deg);
   }
 }
+
+.score-wrapper {
+  background-color: black;
+  padding: 10px 10px 10px 10px;
+  width: 100%;
+  font-family: "Chelsea Market";
+}
+.score-dialog {
+  background-color: gray;
+  color: white;
+  text-align: center;
+  width: 100%;
+}
+
+
 
 

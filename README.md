@@ -48,63 +48,23 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
 For a general overview to contributing to Open Source Projects, [view this guide](https://opensource.guide/how-to-contribute/).
 
 ## Tech Stack
+* Front end client: [React using JFX](https://reactjs.org/)
+* Backend Server: [ExpressJS](https://expressjs.com/)
+* Package manager: [yarn](https://yarnpkg.com/)
+* Form validation: [React Hook Form](https://react-hook-form.com/)
+* Declarative Routing: [React Router](https://reacttraining.com/react-router/web/guides/quick-start)
+* Socket.io: [Socket.io](https://socket.io/)
 
-In the project directory, you can run:
+### Additional Packages
+* TODO - Add packages
 
-### `npm start`
+### Other
+The project is configured to run both the client and server at the same time. In the development environment, the backend server runs at http://localhost:5000 and the React app is available at http://localhost:3000.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
-
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
-
-### Analyzing the Bundle Size
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
-
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `npm run build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
-
+Start the application with:
+ ```
+    yarn dev
+ ```
 
 ## Code of Conduct
 [Contributor Covenant Code of Conduct](/code_of_conduct.md)
@@ -123,3 +83,9 @@ This application leverages the following projects:
 * Running total of player points.
 * Running total of top N players scores.
 * Ability to define different categories for different rounds.
+* Show total number of games being played on this server on the landing page
+* Allow people to spectate and not play
+* On owner connection to create game, implement a game-check event, to test if game still exists on server
+* Implement a score based on the timer 
+    * Start with a base score of say 15 and remove answers every five seconds
+    * Score drops by five points and finally the answer is all that remains

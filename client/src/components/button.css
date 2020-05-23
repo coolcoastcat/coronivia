@@ -12,6 +12,7 @@
     border-radius: 10;
     cursor: pointer;
     transition: transform 0.3s ease;
+    margin: 2px 2px 2px 2px;
 }
 
 .btn:hover {
