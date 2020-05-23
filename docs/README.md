@@ -1,0 +1,1 @@
+Allows the docs folder to exist.
