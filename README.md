@@ -1,13 +1,17 @@
 # coronivia
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
+## Releases
+__v0.0.0 - Current__
+* Created documentation and initial project structure
+
 ## The Game
 Coronivia is a game for 1 to 1 million players (might need some load testing and some sponsored hosting for the million player games). The landing page will have a very simple interface to either:
 * __Create a game__
 
     If you create a game, you are the owner.  Owners get to specify their player name, the number of rounds, number of questions per round and the categories for each round. Number of questions per round ranges from 1 to 50 (see [Open Trivia Database API](https://opentdb.com/) for constraints). Number of rounds will be capped at a sensible 10.
 
-    Additional ideas for room creation: length of countdown timer, allow players to join games in Playing state.
+    Additional ideas for room creation: length of countdown timer, allow players to join games in __Playing state__.
 
     * __Waiting Room State__
     
@@ -39,6 +43,68 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
     Join a game allows a user to enter a four character Join Game Code to enter a non-started game. Players are prompted for their player name and are then placed in the waiting room.
 
 ## How to Contribute
+[Contributing to Coronivia](/CONTRIBUTING.md)
+
+For a general overview to contributing to Open Source Projects, [view this guide](https://opensource.guide/how-to-contribute/).
+
+## Tech Stack
+
+In the project directory, you can run:
+
+### `npm start`
+
+Runs the app in the development mode.<br />
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+
+The page will reload if you make edits.<br />
+You will also see any lint errors in the console.
+
+### `npm test`
+
+Launches the test runner in the interactive watch mode.<br />
+See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+
+### `npm run build`
+
+Builds the app for production to the `build` folder.<br />
+It correctly bundles React in production mode and optimizes the build for the best performance.
+
+The build is minified and the filenames include the hashes.<br />
+Your app is ready to be deployed!
+
+See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+
+
+## Learn More
+
+You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+
+To learn React, check out the [React documentation](https://reactjs.org/).
+
+### Code Splitting
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+
+### Analyzing the Bundle Size
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+
+### Making a Progressive Web App
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
+
+### Advanced Configuration
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
+
+### Deployment
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
+
+### `npm run build` fails to minify
+
+This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+
 
 ## Code of Conduct
 [Contributor Covenant Code of Conduct](/code_of_conduct.md)
