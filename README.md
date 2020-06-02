@@ -2,8 +2,11 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.0 - Current__
-* Created documentation and initial project structure
+__v0.0.2 - Current__
+* WIP Release - Overview: Substantial progress in creating core artifacts and eventing architecture. Released before creating the game state machine.
+* Owners can create / end games 
+* Players can join / leave games
+* Basic componets and real-time event exchanges functional
 
 ## The Game
 Coronivia is a game for 1 to 1 million players (might need some load testing and some sponsored hosting for the million player games). The landing page will have a very simple interface to either:
@@ -56,6 +59,7 @@ For a general overview to contributing to Open Source Projects, [view this guide
 * Socket.io: [Socket.io](https://socket.io/)
 
 ### Additional Packages
+* [React Confirm Alert](https://www.npmjs.com/package/react-confirm-alert)
 * TODO - Add packages
 
 ### Other
