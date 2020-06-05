@@ -6,7 +6,8 @@
 .pnp.js
 client/node_modules
 client/test.js
-
+.eslintrc*
+package-lock.json
 # testing
 /coverage
 
