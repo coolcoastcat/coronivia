@@ -5,7 +5,9 @@ import './index.css';
 import { Button } from "./components/Button";
 import { CreateGameForm, JoinGameForm } from "./components/forms";
 import { GameInfo } from "./components/GameInfo";
-import { PlayerList } from "./components/PlayerList";
+import { GamePlay } from "./components/GamePlay";
+import { PlayerList, PlayerListScores } from "./components/PlayerList";
+import { Test } from "./test";
 
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
@@ -19,6 +21,7 @@ import {
   Link,
   Redirect
 } from "react-router-dom";
+import { Countdown } from './components/Countdown';
 
 /////////////  CONSTANTS /////////////  
 const SERVER_URI = "http://localhost:5000";
@@ -42,6 +45,9 @@ export default function App() {
           </Route>
           <Route path="/create">
             <Create />
+          </Route>
+          <Route path="/test">
+            <TestRoute />
           </Route>
           <Route path="/">
             <Home />
@@ -69,6 +75,9 @@ function Create() {
   return <CreateGame />;
 }
 
+function TestRoute() {
+  return <Test />;
+}
 
 /////////////// HELPER FUNCTIONS /////////////
 /* Parse out the base URL and return */
@@ -213,7 +222,7 @@ class CreateGame extends React.Component{
       );
     } else {
       return(
-        <Game gameConfig={this.gameConfig}  ref={this.playerListElement}  socket={this.socket}  />
+        <Game gameConfig={ this.gameConfig }  ref={ this.playerListElement }  socket={ this.socket }  />
       );
     }
   }
@@ -240,11 +249,13 @@ class Game extends React.Component{
       leaveGame: false, 
       serverConnection: 'disconnected',
       isLoading: true,
-      error: null
+      error: null,
+      countdownData: null
     };
     this.socket = props.socket;
     this.setUpEventHandlers();
     this.playerListElement = React.createRef();
+    this.countdownElement = React.createRef();
   }
 
    /* Method bound to CreateGame reference so that Parent can pass in updates to the playerArray and force a refresh 
@@ -260,8 +271,29 @@ class Game extends React.Component{
 
    setUpEventHandlers(){
     console.log("Setting up socket.io event hanlders for socket: "+this.socket.id);
+    
+    /* General handler for countdown timers received from the server.
+      @param data.count  seconds remaining
+      @param data.timerMessage message to show above the seconds remaining
+      @param data.showCountdown Boolean of whether to show the digits counting down
+     */
+    this.socket.on('countdown',(data) =>{
+      console.log('countdown event: %o',data);
+      this.setState({countdownData: data});
+      this.countdownElement.current.updateCountdown(data); // Update the child & show the countdown count
+    });
+   
+    /* Nulls the countdownData which hides the countdown component
+    */
+    this.socket.on('clear-countdown',(data) =>{
+      console.log('clear-countdown event');
+      this.setState({countdownData: null});
+    });
+
+
     this.socket.on('game-start',(data) =>{
       console.log('event: game-start with data: %o',data);
+      this.setState({ gameStatus: data.gameStatus }); // Kick things off!
     });
   
     this.socket.on('player-change',(playerArray) =>{
@@ -334,7 +366,7 @@ class Game extends React.Component{
             this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
             (data)=>{
               if(data.success){
-                console.log("Game started");
+                console.log("Server acknowledged start-game event");
               } 
                 else {this.handleError(data.error);}
             });
@@ -367,7 +399,7 @@ class Game extends React.Component{
                   buttonStyle='btn--success--solid'>Close</Button>
               </p>
               <p>
-              <PlayerList thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
+              <PlayerListScores thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
               </p>
             </div>
           </div>
@@ -474,38 +506,39 @@ class Game extends React.Component{
     }
 
     if (this.state.error) { // REPLACE WITH DIALOG
-      return <p>{this.state.error}</p>;
+      return <p>{ this.state.error }</p>;
     }
-
-    
 
     switch(this.state.gameStatus){
       case 'WAITING':
         return(
           <div>
-            <h2>{headerMessage}</h2>
-            <h4>Share this link with other players:   {getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname}</h4>
-            <p>{this.state.players.length} {(this.state.players.length === 1) ? 'player': 'players'} waiting</p>
-            <PlayerList thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
+            <h2>{ headerMessage }</h2>
+            <h4>Share this link with other players: { getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname }</h4>
+            <p>{this.state.players.length} { (this.state.players.length === 1) ? 'player': 'players' } waiting</p>
+            <PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } />
             <p></p>
-            <GameInfo gameConfig={this.gameConfig} handleStartGame={this.handleStartGame} />
+            <GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } />
             {waitingButtons}     
           </div>
         );
       
       case 'PLAYING':
+       let countdown = (this.state.countdownData)? <Countdown ref={this.countdownElement}  /> : '';
       return(
         <div>
-          <h2>Game Room {this.gameConfig.roomname} is Playing!</h2>
-          <PlayerList thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
+          <h2>Game Room { this.gameConfig.roomname } is Playing Coronivia!</h2>
+          <div>{countdown}</div>
           <p></p>
-          <GameInfo gameConfig={this.gameConfig} handleStartGame={this.handleStartGame} />
-          {playingButtons}        
+          <div><GamePlay gameConfig={ this.gameConfig } socket={ this.socket }  /></div>
+          { playingButtons }
+          <p></p>
+          <div><PlayerList thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></div>
         </div>
       );
 
       case 'ENDED':
-        return(<div>Game Ended</div>);
+        return(<PlayerListScores  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />);
 
       default:
         return(<div>Really shouldn't get here</div>);

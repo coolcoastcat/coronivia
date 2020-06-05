@@ -7,15 +7,29 @@ export class Countdown extends React.Component{
         console.log("Countdown constructed with props: %o",props);
         
         this.state = {
-            time: props.time
+            time: 0,
+            showCountdown: false,
+            timerMessage: ''
         };
+    }
+
+    /* Updates the countdown 
+        @param data.count - The current timer digit
+        @param data.timerMessage - Message to show above the countdown
+        @showCountdown - Whether to show or hide the countdown number
+    */
+    updateCountdown(data){
+        this.setState({time: data.count, timerMessage: data.timerMessage, showCountdown: data.showCountdown });
     }
     
     render(){
+        
         return(
             <div>
-            this.state.time
+                <p>{this.state.timerMessage}</p>
+                <p> {this.state.showCountdown && 'Time remaining: '+ this.state.time }</p>
             </div>
         );
+        
     }
 }

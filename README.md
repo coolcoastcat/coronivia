@@ -82,14 +82,15 @@ This application leverages the following projects:
 * [The Open Trivia Database](https://opentdb.com/)
 
 ## Ideas Parking lot
-* Chat component for the game room?
-* Questions from the API come in easy, medium and hard.  Have different point values for each question type.
-* Running total of player points.
-* Running total of top N players scores.
-* Ability to define different categories for different rounds.
-* Show total number of games being played on this server on the landing page
-* Allow people to spectate and not play
-* On owner connection to create game, implement a game-check event, to test if game still exists on server
-* Implement a score based on the timer 
+* SECURITY: Set a GUID in a cookie for the user. Submit with client API calls to see if this is the same user that joined a game on rejoining.
+* FEATURE: Chat component for the game room?
+* FEATURE: Questions from the API come in easy, medium and hard.  Have different point values for each question type.
+* FEATURE: Running total of player points. - IMPLEMENTED
+* FEATURE: Running total of top N players scores.
+* FEATURE: Ability to define different categories for different rounds.
+* FEATURE: Show total number of games being played on this server on the landing page
+* FEATURE: Allow people to spectate and not play
+* SCALABILITY: On owner connection to create game, implement a game-check event, to test if game still exists on server
+* FEATURE: Implement a score based on the timer 
     * Start with a base score of say 15 and remove answers every five seconds
     * Score drops by five points and finally the answer is all that remains
