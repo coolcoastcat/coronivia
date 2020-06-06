@@ -28,7 +28,8 @@ const styles = theme => ({
         padding: '2px 5px'
     },
     label: {
-        fontWeight: 600
+        fontWeight: 600,
+        fontFamily: "Chelsea Market"
     }
   });
 

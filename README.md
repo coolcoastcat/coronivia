@@ -91,6 +91,7 @@ This application leverages the following projects:
 * FEATURE: Show total number of games being played on this server on the landing page
 * FEATURE: Allow people to spectate and not play
 * SCALABILITY: On owner connection to create game, implement a game-check event, to test if game still exists on server
+* FEATURE: Add copy-to-clipboard feature next to URL in Waiting room
 * FEATURE: Implement a score based on the timer 
     * Start with a base score of say 15 and remove answers every five seconds
     * Score drops by five points and finally the answer is all that remains

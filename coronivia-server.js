@@ -955,4 +955,27 @@ app.get('/api/dump-all-games', (req, res) => {
   res.send({ gameRoomArray });
 })
 
+// DEBUG - REMOVE BEFORE PROD
+/* Send an event to all clients */
+app.get('/api/send-event', (req, res) => {
+result = validateParams(["e","d"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ success: false, errors: result.messages });
+  return;
+}
+
+  console.log("/api/send-event called");
+  const roomIDs = Object.keys(gameRoomArray);
+  const event = req.query.e;
+  const queryData = JSON.parse(req.query.d);
+  console.log(queryData);
+  roomIDs.forEach(id => {
+    const gameRoom = gameRoomArray[id];
+    
+    io.to(gameRoom.roomName).emit(event,queryData);
+  });
+  res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
+})
+
 /////////////// API ENDPOINTS - END ///////////////

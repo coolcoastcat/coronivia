@@ -5,11 +5,13 @@
 /.pnp
 .pnp.js
 client/node_modules
-client/test.js
+
 .eslintrc*
 package-lock.json
 # testing
 /coverage
+client/test*
+test*
 
 # production
 /build
