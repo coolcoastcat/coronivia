@@ -251,8 +251,8 @@ function handleNewSocketConnection(socket){
     let gameRoom = gameRoomArray[data.gameRoomName];
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
-    console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.answer+" correct answer is "+currentQuestion.correctAnswer);
-    if(data.answer === currentQuestion.correctAnswer) {
+    console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+    if(data.playerAnswer === currentQuestion.correctAnswer) {
       let points = currentQuestion.questionData.pointValue;
       gameRoom.getPlayer(data.player).updateScore(points);
       pointsEarned = points;
@@ -420,7 +420,6 @@ function getPlayer(playerName,roomName){
 function validateParams(params,query){
   var result = {success: true, messages: []};
   params.forEach(param =>{ if(!query.hasOwnProperty(param)){
-    console.log("DEBUG validateParams(): didn't find "+param+" in query: %o",query);
       result["success"] = false;
       result["messages"].push("Missing required parameter: "+param);
     }
@@ -617,7 +616,7 @@ class GameRoom{
  sendAnswer(gameRoom){
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
-  console.log("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
+  // console.log("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
   
   io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
   let answerTitle = 'Answer';
@@ -645,16 +644,18 @@ class GameRoom{
   */
   endGame(){
   let winningPlayerArray = this.getWinners();
-  console.log("sending winner array: "+winningPlayerArray);
+  console.log("sending winner array: %o ",winningPlayerArray);
   io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray});
-  io.sockets.clients(gameRoom.roomName).forEach(s=>{
-    s.leave(gameRoom.roomName);
-    s.disconnect(true);
-});
+  console.log("Closing all the sockets for room "+gameRoom.roomName);
+  this.players.forEach(player=>{
+    player.socket.disconnect(true);
+    console.log('Disconneded socket for player: '+player.name);
+  });
 
-  delete gameRoomArray[gameRoom.roomName];
-  console.log("Removed game: "+roomName);
-  return true;
+  gameRoom.gameStatus = 'ENDED';
+  console.log('Calling external function to delete game');
+  endGame(gameRoom.roomName, gameRoom.ownerID);
+  
 }
 
 /*
@@ -673,7 +674,7 @@ getWinners(){
 
   this.players.forEach(player=>{ // put players with matching high scores into the result array
     if(player.score === highScore){
-        winningPlayers.push(player);
+        winningPlayers.push(player.name);
     }
   });
 
@@ -711,8 +712,8 @@ class Round {
   */
   getCurrentQuestion(){
     let currentQuestionObj = this.questionArray[this.currentQuestionNumber];
-    console.log('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
-    console.log('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
+//    console.log('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
+//    console.log('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
     return currentQuestionObj;
   }
 

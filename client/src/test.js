@@ -1,6 +1,7 @@
 // used as a mock to test components
 import React from 'react';
 import Question from './components/Question';
+import QuestionDialog from './components/QuestionDialog';
 import io from "socket.io-client/lib";
 
 
@@ -15,10 +16,13 @@ export function Test() {
         answers: ["Tungsten",
         "Carbon",
         "Platinum",
-        "Osmium"]
+        "A really long answer that should allow me to test how the dialogs are going to work"]
     };
 
     const playerName = 'Archer';
+    const roomName = 'XXXX';
+    const timerText = 'Time remaining: 3';
+    const dialogTitle = 'Question 1 of 5';
     
     const testData = { 
         currentRoundNumber: 1, 
@@ -30,7 +34,10 @@ export function Test() {
       <header className="App-header">
        
         <div>
-        <Question socket={socket} questionJSON={testData} thisPlayer={playerName}  /> 
+        
+        <QuestionDialog timerText={timerText} dialogTitle={dialogTitle} >
+            <Question socket={socket} questionJSON={testData} thisPlayer={playerName} gameRoomName={roomName}  />
+        </QuestionDialog>
         </div>
       
         </header>

@@ -258,6 +258,12 @@ class Game extends React.Component{
     this.countdownElement = React.createRef();
   }
 
+   /* Clean up once the game is unmounted */
+   componentWillUnmount() {
+     console.log('Closing socket server');
+    io.close();
+   }
+
    /* Method bound to CreateGame reference so that Parent can pass in updates to the playerArray and force a refresh 
         @param playerArray The updated player array to show.
     */
@@ -267,7 +273,7 @@ class Game extends React.Component{
     this.setState({players: playerArray});
     console.log("updating PlayerList with %o",this.state.players);
     this.playerListElement.current.updatePlayers(this.state.players); // Update the child
-}
+  }
 
    setUpEventHandlers(){
     console.log("Setting up socket.io event hanlders for socket: "+this.socket.id);
@@ -316,11 +322,9 @@ class Game extends React.Component{
       console.log('event: answer with data: %o',data);
     });
   
-    this.socket.on('round-end',(data) =>{
-      console.log('event: round-end with data: %o',data);
-    });
+
   
-    this.socket.on('game-end',(data) =>{
+    this.socket.on('game-ended',(data) =>{
       console.log('event: game-end with data: %o',data);
       this.handleEndGame();
 
@@ -341,6 +345,8 @@ class Game extends React.Component{
       console.log('event: disconnect from server for reason: '+reason);
       if (reason === 'io server disconnect') {
         this.socket.connect(); // manually reconnecting
+      } else {
+        this.socket.disconnect(true);
       }
     });
   
