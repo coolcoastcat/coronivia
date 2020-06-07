@@ -20,9 +20,9 @@ const MAX_ROUNDS = 50;
 // timing intervals
 const GAME_START_COUNTDOWN = 3;
 const ROUND_LABEL_TIMER = 3;
-const QUESTION_COUNTDOWN = 15;
+const QUESTION_COUNTDOWN = 10;
 const SHOW_ANSWER_TIMER = 5;
-const SHOW_SCORES_TIMER = 10;
+const SHOW_SCORES_TIMER = 7;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -154,12 +154,14 @@ function handleNewSocketConnection(socket){
     }
 
     let removePlayerResult =  removePlayer(data.player, data.roomname); 
-    
+    let game = gameRoomArray[data.roomname];
+
     if(removePlayerResult.success){
-      // Tell everyone that the Players have changed
-      io.to(data.roomname).emit('player-change',game.getPlayerInfo());
-      callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
-    
+      if(game.players.length > 0){ // Only send an event if there is someone to send it to
+        // Tell everyone that the Players have changed
+        io.to(data.roomname).emit('player-change',game.getPlayerInfo());
+        callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
+      }
     } else {
       // probably useless since the client already left...
       callback({ success: false, error: removePlayerResult.messages});
@@ -222,8 +224,9 @@ function handleNewSocketConnection(socket){
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
     console.log('Issued game-start event to Game Room: '+gameRoom.roomName);
    
-    createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,"The Game is starting!",gameRoom,gameRoom.startRound);
-   
+   // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
+   gameRoom.startRound(gameRoom); // Start the 1st Round
+
     callback({success: true, message: 'Game started'});
   });
 
@@ -251,14 +254,17 @@ function handleNewSocketConnection(socket){
     let gameRoom = gameRoomArray[data.gameRoomName];
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
-    console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
-    if(data.playerAnswer === currentQuestion.correctAnswer) {
-      let points = currentQuestion.questionData.pointValue;
-      gameRoom.getPlayer(data.player).updateScore(points);
-      pointsEarned = points;
-      console.log("Player earned: "+points);
+    if(currentQuestion){
+      console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      if(data.playerAnswer === currentQuestion.correctAnswer) {
+        let points = currentQuestion.questionData.pointValue;
+        gameRoom.getPlayer(data.player).updateScore(points);
+        pointsEarned = points;
+        console.log("Player earned: "+points);
+      }
+    } else {
+      console.log("Player was too late answering question and no current question exists!");
     }
-    
     callback({success: true, points: pointsEarned})
   });
 
@@ -287,17 +293,18 @@ server.listen(port, () => console.log(`Listening on port ${port}`));
 /* Creates a timer for a particular room to display a countdown 
   @param roomname The room to broadcast the timer
   @param secs How many seconds for the countdown 
+  @param event type of event to emit
   @param message Message to show with the countdown timer
   @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
   @param callback Function to call once the countdown has elapsed
 */
-function createTimer(roomName,secs,message,gameRoom,callback){
+function createTimer(roomName,secs,event,message,gameRoom,callback){
   
-  console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
+  console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
 
   let timer = setInterval(()=>{
 
-    io.to(roomName).emit('countdown',{ count: secs, timerMessage: message, showCountdown: true }); // Update all the scores
+    io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: true }); // Update all the scores
     secs--;
     if(secs === 0){
       clearInterval(timer);
@@ -310,14 +317,15 @@ function createTimer(roomName,secs,message,gameRoom,callback){
 /* Creates a timer for a particular room to show a message
   @param roomname The room to send the timer
   @param secs How many seconds to display a message
+  @param event type of event to emit
   @param message Message to show
   @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
   @param callback Function to call once the timer has elapsed
 */
-function createTimerNoCountdown(roomName,secs,message,gameRoom,callback){
-  console.log('DEBUG: createTimerNoCountdown() called with roomName: ' + roomName + ' secs: '+ secs + ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name);
+function createTimerNoCountdown(roomName,secs,event,message,gameRoom,callback){
+  console.log('DEBUG: createTimerNoCountdown() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name);
 
-  io.to(roomName).emit('countdown',{count: secs,timerMessage: message, showCountdown: false});
+  io.to(roomName).emit(event,{count: secs,timerMessage: message, showCountdown: false});
   let timer = setInterval(()=>{
     secs--;
     if(secs === 0){
@@ -558,14 +566,16 @@ class GameRoom{
   }
 
   /* Starts the round with the current this.currentRoundNumber. 
+    @param Takes a reference to the game object to start
+    TODO: Instead of passing gameRoom around, refactor to use bind to 'this'
   */
   startRound(gameRoom){
     //TODO: Check to see that at least one client is connected. Otherwise end the game and clean-up
 
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
-      let roundTitle = 'Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
+      let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
       console.log("Starting " + roundTitle);
-      createTimerNoCountdown(gameRoom.roomName,ROUND_LABEL_TIMER,roundTitle,gameRoom,gameRoom.playRound);
+      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
       gameRoom.endGame();
     }
@@ -575,7 +585,10 @@ class GameRoom{
     @return boolean whether there are more rounds to play
   */
   hasMoreRounds(){
-    return (this.currentRoundNumber === this.rounds)? false : true ;
+    let hasMore = (this.currentRoundNumber == this.rounds)? false : true ;
+    console.log("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
+      " this.rounds: "+this.rounds+" hasMore: "+hasMore);
+    return hasMore;
   }
  
   /* Gets the next question and sends it. Ends round if no more questions. 
@@ -584,7 +597,7 @@ class GameRoom{
   playRound(gameRoom){
     let round = gameRoom.getCurrentRound(); // We know there is one because we checked in startRound()
 
-    if(round.hasMoreQuestions()){
+    if(round && round.hasMoreQuestions()){
       gameRoom.sendNextQuestion(round.getCurrentQuestion(),gameRoom.currentRoundNumber,round.currentQuestionNumber,round.numberOfQuestions);
     } else {
       gameRoom.endRound();
@@ -600,13 +613,13 @@ class GameRoom{
   sendNextQuestion(question,currentRoundNumber, questionNumber, totalQuestions){
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
-    let questionTitle = 'Round ' + currentRoundNumber + ', Question '+questionNumber+' of '+totalQuestions;
+    let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
     let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
     console.log("Sending question: %o",data);
     
     io.to(this.roomName).emit('question',data);
 
-    createTimer(this.roomName,QUESTION_COUNTDOWN,questionTitle,this,this.sendAnswer);
+    createTimer(this.roomName,QUESTION_COUNTDOWN,'countdown-question',questionTitle,this,this.sendAnswer);
   }
 
   /* Shows the answer to the current question and calls playRound after an interval.
@@ -621,7 +634,7 @@ class GameRoom{
   io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
   let answerTitle = 'Answer';
   currentRoundObj.currentQuestionNumber++;
-  createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,answerTitle,gameRoom,gameRoom.playRound);
+  createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
 }
 
   /* Ends the current round and sends player-change data, followed by a show-scores timed message 
@@ -632,29 +645,26 @@ class GameRoom{
     console.log("Ending Round "+this.currentRoundNumber);
     io.to(this.roomName).emit('round-end',this.getPlayerInfo());
     this.currentRoundNumber++;
-    if(this.hasMoreRounds()){
-      createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'Scores',this,this.startRound);
-    } else {
-      this.endGame();
-    }
+    let roundMessage = 'Scores after Round '+ this.currentRoundNumber;
+    createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
   }
 
   /* Tells the clients the game is over. Emits a game ending event and closes all the sockets
     @emits game-ended With the winner 
   */
   endGame(){
-  let winningPlayerArray = this.getWinners();
-  console.log("sending winner array: %o ",winningPlayerArray);
-  io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray});
-  console.log("Closing all the sockets for room "+gameRoom.roomName);
-  this.players.forEach(player=>{
-    player.socket.disconnect(true);
-    console.log('Disconneded socket for player: '+player.name);
-  });
+    let winningPlayerArray = this.getWinners();
+    console.log("sending winner array: %o ",winningPlayerArray);
+    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray});
+    console.log("Closing all the sockets for room "+gameRoom.roomName);
+    this.players.forEach(player=>{
+      player.socket.disconnect(true);
+      console.log('Disconneded socket for player: '+player.name);
+    });
 
-  gameRoom.gameStatus = 'ENDED';
-  console.log('Calling external function to delete game');
-  endGame(gameRoom.roomName, gameRoom.ownerID);
+    gameRoom.gameStatus = 'ENDED';
+    console.log('Calling external function to delete game');
+    endGame(gameRoom.roomName, gameRoom.ownerID);
   
 }
 
@@ -674,7 +684,7 @@ getWinners(){
 
   this.players.forEach(player=>{ // put players with matching high scores into the result array
     if(player.score === highScore){
-        winningPlayers.push(player.name);
+        winningPlayers.push({name:player.name,score:player.score});
     }
   });
 

@@ -1,48 +1,39 @@
 // used as a mock to test components
 import React from 'react';
-import Question from './components/Question';
+import WinnerList from './components/WinnerList';
 import QuestionDialog from './components/QuestionDialog';
-import RoundDialog from './components/RoundDialog';
 import io from "socket.io-client/lib";
+import Box from '@material-ui/core/Box';
 
 
-export function Test() {
-    const SERVER_URI = "http://localhost:5000";
-    const socket = io(SERVER_URI);
-    const questionData = {
-        category: "Science & Nature",
-        type: "multiple",
-        difficulty: "easy",
-        question: "Which element has the highest melting point?",
-        answers: ["Tungsten",
-        "Carbon",
-        "Platinum",
-        "A really long answer that should allow me to test how the dialogs are going to work"]
-    };
-
-    const playerName = 'Archer';
-    const roomName = 'XXXX';
-    const timerText = 'Time remaining: 3';
-    const dialogTitle = 'Question 1 of 5';
+export class Test extends React.Component {
+    constructor(props){
+        super(props);
     
-    const testData = { 
-        currentRoundNumber: 1, 
-        questionNumber: 1, 
-        totalQuestions: 1, 
-        question: questionData };
+        this.SERVER_URI = "http://localhost:5000";
+        this.socket = io(this.SERVER_URI);
+        this.winningPlayerArray =[{name: 'Archer',score:77},{name: 'Launa', score:77}];
+        this.state = {
+          showQuestion: true,
+          timerText: 'Game Over!',
+          questionDialogTitle: 'Game Winner'  
+        };
+
+    
+    }
+    
+    handleLeaveGame = ()=>{
+        alert('called Test.handleLeaveGame');
+    }
+
+    render(){
     return (
-      <div className="App">
-      <header className="App-header">
-       
-        <div>
-        
-        <QuestionDialog timerText={timerText} dialogTitle={dialogTitle} >
-            <Question socket={socket} questionJSON={testData} thisPlayer={playerName} gameRoomName={roomName}  />
-        </QuestionDialog>
-        
-        </div>
-      
-        </header>
-      </div>
+     
+            <Box>
+                <QuestionDialog showQuestion={this.state.showQuestion} timerText={this.state.timerText} dialogTitle={this.state.questionDialogTitle} >
+                    <WinnerList leaveGame={this.handleLeaveGame}  winners={this.winningPlayerArray} />
+                </QuestionDialog>
+            </Box> 
     );
-  }
+    }
+}

@@ -2,21 +2,14 @@ import React from 'react';
 import { Redirect } from "react-router-dom";
 import { GameInfo } from "./GameInfo";
 import { GamePlay } from "./GamePlay";
-import RoundDialog from './RoundDialog';
 import { CreateGameForm, JoinGameForm } from "./forms";
-import { PlayerList, PlayerListScores } from "./PlayerList";
-import { Countdown } from './Countdown';
+import PlayerListScores from './PlayerListScores';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
 import { Button } from "./Button";
 import AlertDialog from "./AlertDialog";
 
 import Box from '@material-ui/core/Box';
-import Dialog from '@material-ui/core/Dialog';
-import DialogActions from '@material-ui/core/DialogActions';
-import DialogContent from '@material-ui/core/DialogContent';
-import DialogContentText from '@material-ui/core/DialogContentText';
-import DialogTitle from '@material-ui/core/DialogTitle';
 
 import io from "socket.io-client/lib";
 
@@ -195,13 +188,11 @@ export class CreateGame extends React.Component{
         leaveGame: false, 
         serverConnection: 'disconnected',
         isLoading: true,
-        error: null,
-        countdownData: null
+        error: null
       };
       this.socket = props.socket;
       this.setUpEventHandlers();
       this.playerListElement = React.createRef();
-      this.countdownElement = React.createRef();
       this.handleStartGame = this.handleStartGame.bind(this);
       this.handleCancelGame = this.handleCancelGame.bind(this);
     }
@@ -225,25 +216,7 @@ export class CreateGame extends React.Component{
   
      setUpEventHandlers(){
       console.log("Setting up socket.io event hanlders for socket: "+this.socket.id);
-      
-      /* General handler for countdown timers received from the server.
-        @param data.count  seconds remaining
-        @param data.timerMessage message to show above the seconds remaining
-        @param data.showCountdown Boolean of whether to show the digits counting down
-       */
-      this.socket.on('countdown',(data) =>{
-        console.log('countdown event: %o',data);
-        this.setState({countdownData: data});
-        this.countdownElement.current.updateCountdown(data); // Update the child & show the countdown count
-      });
      
-      /* Nulls the countdownData which hides the countdown component
-      */
-      this.socket.on('clear-countdown',(data) =>{
-        console.log('clear-countdown event');
-        this.setState({countdownData: null});
-      });
-  
   
       this.socket.on('game-start',(data) =>{
         console.log('event: game-start with data: %o',data);
@@ -271,12 +244,6 @@ export class CreateGame extends React.Component{
       });
     
   
-    
-      this.socket.on('game-ended',(data) =>{
-        console.log('event: game-end with data: %o',data);
-        this.handleEndGame();
-  
-      });
   
       this.socket.on('game-cancelled',(data) =>{
         console.log('event: game-cancelled with data: %o',data);
@@ -291,8 +258,10 @@ export class CreateGame extends React.Component{
     
       this.socket.on('disconnect',(reason) => {
         console.log('event: disconnect from server for reason: '+reason);
-        if (reason === 'io server disconnect') {
+        if(reason === 'transport closed') {
           this.socket.connect(); // manually reconnecting
+        } if(reason === 'io server disconnect') {
+          this.socket.disconnect(true);
         } else {
           this.socket.disconnect(true);
         }
@@ -349,6 +318,7 @@ export class CreateGame extends React.Component{
     }
   
     handleError(errorMsg){
+      console.log("handleError(): "+errorMsg);
       confirmAlert({
         title: getErrorPhrase(),
         message: errorMsg,
@@ -451,11 +421,10 @@ export class CreateGame extends React.Component{
           );
         
         case 'PLAYING':
-         let countdown = (this.state.countdownData)? <RoundDialog><Countdown ref={this.countdownElement}  /></RoundDialog> : '';
+       
         return(
           <Box>
             <Box><GamePlay gameConfig={ this.gameConfig } socket={ this.socket }  /></Box>
-            <Box>{countdown}</Box>
             <Box><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
             <Box>{ playingButtons }</Box>
           </Box>
