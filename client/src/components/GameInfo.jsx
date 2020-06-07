@@ -4,7 +4,7 @@ import "./game-info.css";
 export class GameInfo extends React.Component{
     constructor(props){
         super(props)
-        console.log("OwnerView constructed with props: %o",props);
+        console.log("GameInfo constructed with props: %o",props);
         this.gameConfig = props.gameConfig;
     }
     

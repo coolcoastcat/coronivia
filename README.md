@@ -2,11 +2,22 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.2 - Current__
+__v0.0.3 - Current__
+* Steel threaded the game flow for multiple users
+* Added Material UI for some components
+* Lots of refactoring. Moved classes out of index.js
+
+Known Issues
+* UI is a hot mess with lots of experimentation and learning in progress.  Lots of cleanup to be done.  
+* User can select an answer and not submit it but the UI says it was on the answer screen
+* Dialog messages need to be refined.
+
+
+__v0.0.2__
 * WIP Release - Overview: Substantial progress in creating core artifacts and eventing architecture. Released before creating the game state machine.
 * Owners can create / end games 
 * Players can join / leave games
-* Basic componets and real-time event exchanges functional
+* Basic components and real-time event exchanges functional
 
 ## The Game
 Coronivia is a game for 1 to 1 million players (might need some load testing and some sponsored hosting for the million player games). The landing page will have a very simple interface to either:
@@ -59,6 +70,7 @@ For a general overview to contributing to Open Source Projects, [view this guide
 * Socket.io: [Socket.io](https://socket.io/)
 
 ### Additional Packages
+* [React Confirm Alert](https://www.npmjs.com/package/react-confirm-alert)
 * TODO - Add packages
 
 ### Other
@@ -81,14 +93,22 @@ This application leverages the following projects:
 * [The Open Trivia Database](https://opentdb.com/)
 
 ## Ideas Parking lot
-* Chat component for the game room?
-* Questions from the API come in easy, medium and hard.  Have different point values for each question type.
-* Running total of player points.
-* Running total of top N players scores.
-* Ability to define different categories for different rounds.
-* Show total number of games being played on this server on the landing page
-* Allow people to spectate and not play
-* On owner connection to create game, implement a game-check event, to test if game still exists on server
-* Implement a score based on the timer 
+* SECURITY: Set a GUID in a cookie for the user. Submit with client API calls to see if this is the same user that joined a game on rejoining.
+* FEATURE: Chat component for the game room?
+* FEATURE: Add copy to clipboard icon next to room URL
+* FEATURE: Questions from the API come in easy, medium and hard.  Have different point values for each question type.
+* FEATURE: Running total of player points. - IMPLEMENTED
+* FEATURE: Running total of top N players scores. 
+* FEATURE: Ability to set question countdown period.
+* FEATURE: Ability to set pause at end of Round to have owner click continue (reverts to auto if owner leaves).
+* FEATURE: Ability to define different categories for different rounds.
+* FEATURE: Ability for Owner to apply a theme to the game
+* FEATURE: Show total number of games being played on this server on the landing page
+* FEATURE: Allow people to spectate and not play
+* AUDIT: Log game data to a server log file.
+* SCALABILITY: On owner connection to create game, implement a game-check event, to test if game still exists on server
+* FEATURE: Add copy-to-clipboard feature next to URL in Waiting room
+* FEATURE: Allow owner to set the maximum number of players
+* FEATURE: Implement a score based on the timer 
     * Start with a base score of say 15 and remove answers every five seconds
     * Score drops by five points and finally the answer is all that remains

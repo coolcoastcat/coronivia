@@ -17,6 +17,13 @@ const DEFAULT_NUM_ROUNDS = 1; // For people hacking the API
 const MAX_NUM_QUESTIONS = 10;
 const MAX_ROUNDS = 50;
 
+// timing intervals
+const GAME_START_COUNTDOWN = 3;
+const ROUND_LABEL_TIMER = 3;
+const QUESTION_COUNTDOWN = 10;
+const SHOW_ANSWER_TIMER = 5;
+const SHOW_SCORES_TIMER = 7;
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
@@ -62,7 +69,7 @@ function handleNewSocketConnection(socket){
      console.log('Number of rounds set to: ' + rounds);
  
      // create a new game room with the supplied parameters and add it to the list of games
-     game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
  
      gameRoomArray[game.roomName] = game;
      console.log("Room Created: %o",game);
@@ -126,7 +133,7 @@ function handleNewSocketConnection(socket){
   /* Handles remove-player event from client. Takes a GameRoom name a player name and removes player from the game.
     @param roomname The room to exit.
     @param player  The player name to remove from the room.
-    @emits @emits player-change event to all in roomname
+    @emits player-change event to all in roomname
   */
   socket.on('remove-player',(data,callback)=>{
    
@@ -147,12 +154,14 @@ function handleNewSocketConnection(socket){
     }
 
     let removePlayerResult =  removePlayer(data.player, data.roomname); 
-    
+    let game = gameRoomArray[data.roomname];
+
     if(removePlayerResult.success){
-      // Tell everyone that the Players have changed
-      io.to(data.roomname).emit('player-change',game.getPlayerInfo());
-      callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
-    
+      if(game.players.length > 0){ // Only send an event if there is someone to send it to
+        // Tell everyone that the Players have changed
+        io.to(data.roomname).emit('player-change',game.getPlayerInfo());
+        callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
+      }
     } else {
       // probably useless since the client already left...
       callback({ success: false, error: removePlayerResult.messages});
@@ -174,14 +183,15 @@ function handleNewSocketConnection(socket){
       return;
     }
   
+    let game = gameRoomArray[data.roomname];
+    io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
 
     if(!endGame(data.roomname, data.ownerID)){
       console.error("Unable to remove game for some reason");
       callback({ success: false, error: 'unable to remove game...not sure why'});
       return;
     }
-    
-    io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
+  
     io.to(data.roomname).emit('game-cancelled',{success: true, message: data.roomname+' was removed'}); // cancel for all
     console.log("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
    
@@ -196,9 +206,67 @@ function handleNewSocketConnection(socket){
   */
   socket.on('start-game',(data,callback) =>{
     // Validate room and owner id
-    console.log('Starting game for room: '+roomname);
+    result = validateParams(["roomname","ownerID"],data);
+    if(!result.success){
+      console.error(result.messages)  
+      callback({ success: false, error: result.messages});
+      return;
+    }
+    
+    if(!isGameOwner(data.roomname, data.ownerID)){
+      console.error("roomname not found OR ownerID did not match with the room");
+      callback({ success: false, error: 'no such roomname with ownerID found'});
+      return;
+    }
+    gameRoom = gameRoomArray[data.roomname];
+    console.log('Starting game for room: '+data.roomname);
+    
+    io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
+    console.log('Issued game-start event to Game Room: '+gameRoom.roomName);
+   
+   // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
+   gameRoom.startRound(gameRoom); // Start the 1st Round
+
+    callback({success: true, message: 'Game started'});
   });
 
+  /* Handles a player-answer event. Checks if the answer is correct and if so, increments the player's score 
+    @param data.player The player name
+    @param data.gameRoomName The four character game room number
+    @param data.answer The selcted answer from the user
+  */
+  socket.on('player-answer',(data,callback) =>{
+    let result = validateParams(["gameRoomName","player","playerAnswer"],data);
+   
+    if(!result.success){
+      console.error(result.messages);
+      callback({ success: false, error: result.messages});
+      return;
+    }
+   
+    if(!doesGameExist(data.gameRoomName)){
+      console.error("Player "+data.player+" attempted to answer a question for non-existant room: "+data.gameRoomName);
+      callback({ success: false, error: 'No such roomname found: '+data.gameRoomName});
+      return;
+    }
+    
+    let pointsEarned = 0;
+    let gameRoom = gameRoomArray[data.gameRoomName];
+    let currentRoundObj = gameRoom.getCurrentRound();
+    let currentQuestion = currentRoundObj.getCurrentQuestion();
+    if(currentQuestion){
+      console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      if(data.playerAnswer === currentQuestion.correctAnswer) {
+        let points = currentQuestion.questionData.pointValue;
+        gameRoom.getPlayer(data.player).updateScore(points);
+        pointsEarned = points;
+        console.log("Player earned: "+points);
+      }
+    } else {
+      console.log("Player was too late answering question and no current question exists!");
+    }
+    callback({success: true, points: pointsEarned})
+  });
 
   ///////// Utility Socket Message Handlers /////////
    socket.on('error',(data) => {
@@ -216,187 +284,58 @@ function handleNewSocketConnection(socket){
 
 /* Start the server */
 server.listen(port, () => console.log(`Listening on port ${port}`));
-///////////////  API ENDPOINTS - START ///////////////
-
-/* /api/create-game Initializes a new game.
-@param: req.params.amount  optional The number of questions to retrieve per round.  Defaults to 10 if not specified.
-@param: req.params.rounds optional The number of rounds for which to receive questions. Defaults to 1 if not specified.
-@return: res.send sends JSON as a resonse to the call. No explicit return.
-*/
-app.get('/api/create-game', (req, res) => {
-    // console.log("my object: %o", req)
-    result = validateParams(["owner","rounds","questions","difficulty"],req.query);
-    if(!result.success){
-      console.error(result.messages)  
-      res.status(400).send({ game_status: 'failed', errors: result.messages});
-      return;
-    }
-
-    var owner = req.query.owner;
-    console.log('Owner set to: ' + owner);
-  
-
-    var questionsPerRound = req.query.questions;
-    if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS;}
-    console.log('Number of questions set to: ' + questionsPerRound);
-    
-    var rounds = req.query.rounds;
-    if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    console.log('Number of rounds set to: ' + rounds);
-
-    var difficulty = (!req.query.difficulty || req.query.difficulty === 'any') ? null : req.query.difficulty;
-
-    // create a new game room with the supplied parameters and add it to the list of games
-    game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
-
-    gameRoomArray[game.roomName] = game;
-    console.log("Room Created: %o",game);
-
-    res.send({ game_status: 'WAITING',rounds: rounds, questions: questionsPerRound, roomname: game.roomName, owner: owner, owner_id: game.ownerID });
-  });
-
-/* /api/add-player Takes a GameRoom name a player name and adds the player to the game.
-    @param roomname The room to start playing.
-    @param player  The player name to add to the room.
-    @returns JSON game_status: If success, player is added to the room. If failed, error message.
-  */
- app.get('/api/add-player', (req, res) => {
-  result = validateParams(["roomname","player"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages});
-    return;
-  }
-  if(!doesGameExist(req.query.roomname)){
-    console.error("roomname not found");
-    res.status(400).send({ game_status: 'failed', error: 'no such roomname found'});
-    return;
-  }
-  
-  result = addPlayer(req.query.player,req.query.roomname,{connected:false});
-  if(result.success){
-    const game = gameRoomArray[req.query.roomname];
-    res.send({ game_status: 'success',
-              room_name: req.query.roomname, 
-              player: req.query.player,
-              questions: game.questionCount,
-              difficulty: game.difficulty,
-              rounds: game.rounds,
-              roomname: game.roomName, 
-              owner: game.owner,
-              players: game.getPlayerInfo()
-            });
-  } else {
-    res.status(400).send({ game_status: 'failed', error: result.message});
-  }
-});
-
-
-/* /api/remove-player Takes a GameRoom name a player name and removes player from the game.
-    @param roomname The room to exit.
-    @param player  The player name to remove from the room.
-    @returns JSON game_status: If success, player is removed from the room. If failed, error message.
-  */
- app.get('/api/remove-player', (req, res) => {
-  result = validateParams(["roomname","player"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages});
-    return;
-  }
-  if(!doesGameExist(req.query.roomname)){
-    console.error("roomname not found");
-    res.status(400).send({ game_status: 'failed', error: 'no such roomname found'});
-    return;
-  }
-  removePlayer(req.query.player, req.query.roomname);
-  res.send({ game_status: 'success',room_name: req.query.roomname, player: req.query.player});
-});
-
-
-
-/* /api/start-game Takes a GameRoom name and ownerID and moves it from the 'WAITING' state to 'PLAYING' state.
-    @param roomName The room to start playing.
-    @param ownerID  The ID to validate if this request comes from the room owner.
-    @returns JSON game_status: If success, GameRoom is set to PLAYING. If failed, error message.
-  */
- app.get('/api/start-game', (req, res) => {
-  result = validateParams(["roomname","ownerID"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages});
-    return;
-  }
-  
-  if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-    console.error("roomname not found OR ownerID did not match with the room");
-    res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found'});
-    return;
-  }
-    // START THE GAME!
-   gameRoomArray[req.query.roomname].gameState = 'PLAYING';
-
-  console.log("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-  res.send({ game_status: 'PLAYING',room_name: req.query.roomname});
-});
-
-  /* /api/end-game Takes a GameRoom name and ownerID and removes the game from the server.
-    @param roomName The room to be removed.
-    @param ownerID  The ID to validate if this request comes from the room owner.
-    @returns JSON game_status: removed or failed. If success, room name. If failed, error message.
-  */
-app.get('/api/end-game', (req, res) => {
-  result = validateParams(["roomname","ownerID"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages});
-    return;
-  }
-  
-  if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-    console.error("roomname not found OR ownerID did not match with the room");
-    res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found'});
-    return;
-  }
-  if(!endGame(req.query.roomname, req.query.ownerID)){
-    console.error("Unable to remove game for some reason");
-    res.status(500).send({ game_status: 'failed', error: 'unable to remove game...not sure why'});
-    return;
-  }
-  console.log("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-  res.send({ game_status: 'removed',room_name: req.query.roomname});
-});
-
-/* List all games on the server. Returns the room name, the create date, players and status */
-app.get('/api/list-games', (req, res) => {
-  var gameList = {games: []};
-  const roomIDs = Object.keys(gameRoomArray);
-  console.log("Room IDs: "+roomIDs);
-  roomIDs.forEach(id => {
-    var gameBrief = {};
-    console.log(gameRoomArray[id]);
-    gameBrief["roomName"] = gameRoomArray[id].roomName;
-    gameBrief["createdDate"] = gameRoomArray[id].createdDate;
-    gameBrief["players"] = gameRoomArray[id].getPlayerInfo();
-    gameBrief["status"] = gameRoomArray[id].state;
-    gameList.games.push(gameBrief);  
-  });
-  console.log("/api/list-games called:\n %o",gameList);
-  res.send(gameList);
-});
-
-// DEBUG - REMOVE BEFORE PROD
- app.get('/api/dump-all-games', (req, res) => {
-  console.log("/api/dump-all-games called");
-  res.send({gameRoomArray});
-});
-
-/////////////// API ENDPOINTS - END ///////////////
 
 
 
 
 /////////////// HELPER METHODS - START /////////////// 
+
+/* Creates a timer for a particular room to display a countdown 
+  @param roomname The room to broadcast the timer
+  @param secs How many seconds for the countdown 
+  @param event type of event to emit
+  @param message Message to show with the countdown timer
+  @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
+  @param callback Function to call once the countdown has elapsed
+*/
+function createTimer(roomName,secs,event,message,gameRoom,callback){
+  
+  console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
+
+  let timer = setInterval(()=>{
+
+    io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: true }); // Update all the scores
+    secs--;
+    if(secs === 0){
+      clearInterval(timer);
+      io.to(roomName).emit('clear-countdown',{});
+      callback(gameRoom);
+    }
+  },1000);
+}
+
+/* Creates a timer for a particular room to show a message
+  @param roomname The room to send the timer
+  @param secs How many seconds to display a message
+  @param event type of event to emit
+  @param message Message to show
+  @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
+  @param callback Function to call once the timer has elapsed
+*/
+function createTimerNoCountdown(roomName,secs,event,message,gameRoom,callback){
+  console.log('DEBUG: createTimerNoCountdown() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name);
+
+  io.to(roomName).emit(event,{count: secs,timerMessage: message, showCountdown: false});
+  let timer = setInterval(()=>{
+    secs--;
+    if(secs === 0){
+      clearInterval(timer);
+      io.to(roomName).emit('clear-countdown',{});
+      callback(gameRoom);
+    }
+  },1000);
+}
+
 /* If valid room and Player doesn't already exist, adds a player to the room.
    If Player does exist but no valid socket connection exists, reconnect to this Player
   @param playerToAdd String of the player to add
@@ -507,12 +446,34 @@ function endGame(roomName, ownerID){
   return true;
 }
 
+/* takes an Array and shuffles the order 
+  @param Array to shuffle
+  @return Shuffled array
+*/
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+  return array;
+}
+
+
 /////////////// HELPER METHODS - END /////////////// 
 
 /////////////// CLASS DEFINITIONS - START /////////////// 
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
- 
 
   constructor(owner,rounds,questionCount,difficulty) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
@@ -522,11 +483,12 @@ class GameRoom{
       this.questionCount = questionCount;
       this.difficulty = difficulty;
       this.roomName = this.createRoomName();
-      this.gameRoundQuestions = [];
+      this.gameRoundArray = [];
       this.getQuestions(rounds,questionCount,difficulty);
       this.createdDate = Date.now();
       this.players = [];
       this.gameStatus = 'WAITING';
+      this.currentRoundNumber = 0;
   }
 
   /* Retrieves a player by name 
@@ -579,7 +541,6 @@ class GameRoom{
   return uuidv4();
 }
 
-
   /* Calls the opentdb.com API for each round to retrieve questions and asynchronously sets the question sets as rounds into gameRoundQuestions array
       @param: rounds required The number of rounds for which to receive quesitons. Defaults to 1 if not specified.
       @param: questionsPerRound  required The number of questions to retrieve per round.  Defaults to 10 if not specified.
@@ -596,14 +557,220 @@ class GameRoom{
       fetch(this.TRIVIA_URI + params).then(response => {
           return response.json();
       }).then(questionsJSON=>{
-        console.log(`Retrieved questions Round ${i}:`);
-        console.log(questionsJSON)
-        this.gameRoundQuestions.push(questionsJSON);
+        console.log('Retrieved ' + questionsJSON.results.length + ' questions for Round '+ i);
+        let round = new Round(Question.parseQuestions(questionsJSON));
+        this.gameRoundArray.push(round);
       });
         
     } // end for loop
   }
+
+  /* Starts the round with the current this.currentRoundNumber. 
+    @param Takes a reference to the game object to start
+    TODO: Instead of passing gameRoom around, refactor to use bind to 'this'
+  */
+  startRound(gameRoom){
+    //TODO: Check to see that at least one client is connected. Otherwise end the game and clean-up
+
+    if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
+      let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
+      console.log("Starting " + roundTitle);
+      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,gameRoom,gameRoom.playRound);
+    } else { // Out of rounds, end the the game
+      gameRoom.endGame();
+    }
+  }
+  
+  /* Helper method to see if there are more rounds to go
+    @return boolean whether there are more rounds to play
+  */
+  hasMoreRounds(){
+    let hasMore = (this.currentRoundNumber == this.rounds)? false : true ;
+    console.log("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
+      " this.rounds: "+this.rounds+" hasMore: "+hasMore);
+    return hasMore;
+  }
+ 
+  /* Gets the next question and sends it. Ends round if no more questions. 
+    @param gameRoom The game object passed through the callback
+  */
+  playRound(gameRoom){
+    let round = gameRoom.getCurrentRound(); // We know there is one because we checked in startRound()
+
+    if(round && round.hasMoreQuestions()){
+      gameRoom.sendNextQuestion(round.getCurrentQuestion(),gameRoom.currentRoundNumber,round.currentQuestionNumber,round.numberOfQuestions);
+    } else {
+      gameRoom.endRound();
+    }
+  }
+
+  /* Sends the question to the clients  
+    @param question The question object to send 
+    @param currentRoundNumber  The current round number, zero indexed
+    @param questionNumber The current question number
+    @param totalQuestions The count of questions in this round.  
+  */
+  sendNextQuestion(question,currentRoundNumber, questionNumber, totalQuestions){
+    currentRoundNumber++; // For labeling
+    questionNumber++; // For labeling
+    let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
+    let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
+    console.log("Sending question: %o",data);
+    
+    io.to(this.roomName).emit('question',data);
+
+    createTimer(this.roomName,QUESTION_COUNTDOWN,'countdown-question',questionTitle,this,this.sendAnswer);
+  }
+
+  /* Shows the answer to the current question and calls playRound after an interval.
+      Also increments the currentQuestion for the next round
+    @emits answer event with the correct answer
+  */
+ sendAnswer(gameRoom){
+  let currentRoundObj = gameRoom.getCurrentRound();
+  let currentQuestionObj = currentRoundObj.getCurrentQuestion();
+  // console.log("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
+  
+  io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
+  let answerTitle = 'Answer';
+  currentRoundObj.currentQuestionNumber++;
+  createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
 }
+
+  /* Ends the current round and sends player-change data, followed by a show-scores timed message 
+    Increments the currentRoundNumber by 1
+    @emits round-end With player info to update and show scores
+  */
+  endRound(){
+    console.log("Ending Round "+this.currentRoundNumber);
+    io.to(this.roomName).emit('round-end',this.getPlayerInfo());
+    this.currentRoundNumber++;
+    let roundMessage = 'Scores after Round '+ this.currentRoundNumber;
+    createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
+  }
+
+  /* Tells the clients the game is over. Emits a game ending event and closes all the sockets
+    @emits game-ended With the winner 
+  */
+  endGame(){
+    let winningPlayerArray = this.getWinners();
+    console.log("sending winner array: %o ",winningPlayerArray);
+    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray});
+    console.log("Closing all the sockets for room "+gameRoom.roomName);
+    this.players.forEach(player=>{
+      player.socket.disconnect(true);
+      console.log('Disconneded socket for player: '+player.name);
+    });
+
+    gameRoom.gameStatus = 'ENDED';
+    console.log('Calling external function to delete game');
+    endGame(gameRoom.roomName, gameRoom.ownerID);
+  
+}
+
+/*
+  Returns the player with the highest score
+  @return array of winning players
+*/
+getWinners(){
+  let winningPlayers = [];
+  let highScore = 0;
+  
+  this.players.forEach(player=>{ // find the high score
+    if(player.score > highScore){
+        highScore = player.score;
+    }
+  });
+
+  this.players.forEach(player=>{ // put players with matching high scores into the result array
+    if(player.score === highScore){
+        winningPlayers.push({name:player.name,score:player.score});
+    }
+  });
+
+  return winningPlayers;
+}
+
+  /* Returns the current round  
+    @return The 
+  */
+ getCurrentRound(){
+  return this.gameRoundArray[this.currentRoundNumber];
+}
+
+
+} // End GameRoom class
+
+/* The Round class is a thin object wrapper to hold round questions. The order of Round objects  in the 
+gameRound array is the order of Rounds (duh ;)  */
+class Round {
+  constructor(questionArray){
+    this.questionArray = questionArray;
+    this.currentQuestionNumber = 0;
+    this.numberOfQuestions = questionArray.length;
+  }
+
+
+  /* Helper method to encapsulate question iteration 
+    @return boolean if there are more*/
+  hasMoreQuestions(){
+    return (this.currentQuestionNumber === this.numberOfQuestions)? false : true ;
+  }
+
+  /* Returns the currently active question
+    @return the current question object 
+  */
+  getCurrentQuestion(){
+    let currentQuestionObj = this.questionArray[this.currentQuestionNumber];
+//    console.log('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
+//    console.log('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
+    return currentQuestionObj;
+  }
+
+}
+
+/* The Question class encapsulates all the aspects of a question. It's constructed with a question JSON from 
+   opentdb.com and parses it into a format that can be queried and sent to clients */
+class Question{
+  constructor(questionJSON){
+    let pointValuesObj = {easy: 1, medium: 3, hard: 5};
+
+    this.correctAnswer = questionJSON.correct_answer;
+    this.questionData ={
+      category: questionJSON.category,
+      type: questionJSON.type,
+      difficulty: questionJSON.difficulty,
+      question: questionJSON.question,
+      answers: questionJSON.incorrect_answers,
+      pointValue: pointValuesObj[questionJSON.difficulty]
+    };
+    this.questionData.answers.push(this.correctAnswer);
+    this.questionData.answers = shuffle(this.questionData.answers);
+
+  }
+
+
+  /* Static helper method to parse an opendbt.com question result and return an array of Question objects */
+  static parseQuestions(questionsJSON){
+    let result = {success: true, message:'parsed questions'};
+    
+    if(questionsJSON.response_code !== 0){ // handle error from opendbt.com
+        result.success = false;
+        result.message = 'Error response code from opendbt.com: '+questionsJSON.response_code;
+        return result;  
+    }
+    // Populate an array of Question objects
+    let questionResultArray = [];
+    questionsJSON.results.forEach((question)=>{
+      questionResultArray.push(new Question(question));
+    } );
+    console.log('Successfully parsed '+questionResultArray.length + ' questions');
+    return questionResultArray;
+  }
+
+}
+
+
 /* The Player class encapsulates all the aspects and attributes of the Player */
 class Player{
  
@@ -613,5 +780,212 @@ class Player{
     this.score = 0;
     this.socket = socket;
   }
+
+  /* Takes points and adds them to score
+    @param points
+  */
+  updateScore(points){
+    this.score += points;
+  }
 }
 /////////////// CLASS DEFINITIONS - END /////////////// 
+
+///////////////  API ENDPOINTS - START ///////////////
+
+/* /api/create-game Initializes a new game.
+@param: req.params.amount  optional The number of questions to retrieve per round.  Defaults to 10 if not specified.
+@param: req.params.rounds optional The number of rounds for which to receive questions. Defaults to 1 if not specified.
+@return: res.send sends JSON as a resonse to the call. No explicit return.
+*/
+app.get('/api/create-game', (req, res) => {
+  // console.log("my object: %o", req)
+  result = validateParams(["owner","rounds","questions","difficulty"],req.query);
+  if(!result.success){
+    console.error(result.messages)  
+    res.status(400).send({ game_status: 'failed', errors: result.messages });
+    return;
+  }
+
+  var owner = req.query.owner;
+  console.log('Owner set to: ' + owner);
+
+
+  var questionsPerRound = req.query.questions;
+  if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS; }
+  console.log('Number of questions set to: ' + questionsPerRound);
+  
+  var rounds = req.query.rounds;
+  if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
+  console.log('Number of rounds set to: ' + rounds);
+
+  var difficulty = (!req.query.difficulty || req.query.difficulty === 'any') ? null : req.query.difficulty;
+
+  // create a new game room with the supplied parameters and add it to the list of games
+  game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
+
+  gameRoomArray[game.roomName] = game;
+  console.log("Room Created: %o",game);
+
+  res.send({ game_status: 'WAITING',rounds: rounds, questions: questionsPerRound, roomname: game.roomName, owner: owner, owner_id: game.ownerID });
+})
+
+/* /api/add-player Takes a GameRoom name a player name and adds the player to the game.
+  @param roomname The room to start playing.
+  @param player  The player name to add to the room.
+  @returns JSON game_status: If success, player is added to the room. If failed, error message.
+*/
+app.get('/api/add-player', (req, res) => {
+result = validateParams(["roomname","player"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ game_status: 'failed', errors: result.messages});
+  return;
+}
+if(!doesGameExist(req.query.roomname)){
+  console.error("roomname not found");
+  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
+  return;
+}
+
+result = addPlayer(req.query.player,req.query.roomname,{connected:false});
+if(result.success){
+  const game = gameRoomArray[req.query.roomname];
+  res.send({ game_status: 'success',
+            room_name: req.query.roomname, 
+            player: req.query.player,
+            questions: game.questionCount,
+            difficulty: game.difficulty,
+            rounds: game.rounds,
+            roomname: game.roomName, 
+            owner: game.owner,
+            players: game.getPlayerInfo()
+          });
+} else {
+  res.status(400).send({ game_status: 'failed', error: result.message });
+}
+})
+
+
+/* /api/remove-player Takes a GameRoom name a player name and removes player from the game.
+  @param roomname The room to exit.
+  @param player  The player name to remove from the room.
+  @returns JSON game_status: If success, player is removed from the room. If failed, error message.
+*/
+app.get('/api/remove-player', (req, res) => {
+result = validateParams(["roomname","player"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ game_status: 'failed', errors: result.messages });
+  return;
+}
+if(!doesGameExist(req.query.roomname)){
+  console.error("roomname not found");
+  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
+  return;
+}
+removePlayer(req.query.player, req.query.roomname);
+res.send({ game_status: 'success',room_name: req.query.roomname, player: req.query.player });
+})
+
+
+
+/* /api/start-game Takes a GameRoom name and ownerID and moves it from the 'WAITING' state to 'PLAYING' state.
+  @param roomName The room to start playing.
+  @param ownerID  The ID to validate if this request comes from the room owner.
+  @returns JSON game_status: If success, GameRoom is set to PLAYING. If failed, error message.
+*/
+app.get('/api/start-game', (req, res) => {
+result = validateParams(["roomname","ownerID"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ game_status: 'failed', errors: result.messages });
+  return;
+}
+
+if(!isGameOwner(req.query.roomname, req.query.ownerID)){
+  console.error("roomname not found OR ownerID did not match with the room");
+  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
+  return;
+}
+  // START THE GAME!
+ gameRoomArray[req.query.roomname].gameState = 'PLAYING';
+
+console.log("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
+res.send({ game_status: 'PLAYING',room_name: req.query.roomname });
+})
+
+/* /api/end-game Takes a GameRoom name and ownerID and removes the game from the server.
+  @param roomName The room to be removed.
+  @param ownerID  The ID to validate if this request comes from the room owner.
+  @returns JSON game_status: removed or failed. If success, room name. If failed, error message.
+*/
+app.get('/api/end-game', (req, res) => {
+result = validateParams(["roomname","ownerID"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ game_status: 'failed', errors: result.messages });
+  return;
+}
+
+if(!isGameOwner(req.query.roomname, req.query.ownerID)){
+  console.error("roomname not found OR ownerID did not match with the room");
+  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
+  return;
+}
+if(!endGame(req.query.roomname, req.query.ownerID)){
+  console.error("Unable to remove game for some reason");
+  res.status(500).send({ game_status: 'failed', error: 'unable to remove game...not sure why' });
+  return;
+}
+console.log("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
+res.send({ game_status: 'removed',room_name: req.query.roomname });
+})
+
+/* List all games on the server. Returns the room name, the create date, players and status */
+app.get('/api/list-games', (req, res) => {
+var gameList = {games: []};
+const roomIDs = Object.keys(gameRoomArray);
+console.log("Room IDs: "+roomIDs);
+roomIDs.forEach(id => {
+  var gameBrief = {};
+  console.log(gameRoomArray[id]);
+  gameBrief["roomName"] = gameRoomArray[id].roomName;
+  gameBrief["createdDate"] = gameRoomArray[id].createdDate;
+  gameBrief["players"] = gameRoomArray[id].getPlayerInfo();
+  gameBrief["status"] = gameRoomArray[id].state;
+  gameList.games.push(gameBrief);  
+  });
+  console.log("/api/list-games called:\n %o",gameList);
+  res.send(gameList);
+})
+
+// DEBUG - REMOVE BEFORE PROD
+app.get('/api/dump-all-games', (req, res) => {
+  console.log("/api/dump-all-games called");
+  res.send({ gameRoomArray });
+})
+
+// DEBUG - REMOVE BEFORE PROD
+/* Send an event to all clients */
+app.get('/api/send-event', (req, res) => {
+result = validateParams(["e","d"],req.query);
+if(!result.success){
+  console.error(result.messages)  
+  res.status(400).send({ success: false, errors: result.messages });
+  return;
+}
+
+  console.log("/api/send-event called");
+  const roomIDs = Object.keys(gameRoomArray);
+  const event = req.query.e;
+  const queryData = JSON.parse(req.query.d);
+  console.log(queryData);
+  roomIDs.forEach(id => {
+    const gameRoom = gameRoomArray[id];
+    
+    io.to(gameRoom.roomName).emit(event,queryData);
+  });
+  res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
+})
+
+/////////////// API ENDPOINTS - END ///////////////

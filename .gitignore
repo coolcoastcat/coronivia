@@ -6,8 +6,12 @@
 .pnp.js
 client/node_modules
 
+.eslintrc*
+package-lock.json
 # testing
 /coverage
+client/test*
+test*
 
 # production
 /build
