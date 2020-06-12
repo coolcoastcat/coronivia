@@ -10,6 +10,7 @@ import Button from '@material-ui/core/Button';
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import renderHTML from 'react-render-html';
+import { borders } from '@material-ui/system';
 
 const styles = theme => ({
     root: {
@@ -28,8 +29,13 @@ const styles = theme => ({
         padding: '2px 5px'
     },
     label: {
-        fontWeight: 600
-       // fontFamily: "Chelsea Market"
+        fontWeight: 600,
+       fontFamily: "sans-serif",
+       fontSize: '20px'
+    },
+    content: {
+        fontFamily: "sans-serif",
+        fontSize: '20px'
     },
     correct: {
         background: '#edf7ed'
@@ -39,6 +45,20 @@ const styles = theme => ({
     },
     none: {
 
+    },
+    question: {
+        fontSize: '25px',
+        // background: 'lightGray',
+        background: 'linear-gradient(45deg, #b1fac5 30%, #f9fcbd 90%)',
+        padding: '4px 5px'
+    },
+    questionDataHd: {
+        fontSize: '14px',
+        fontWeight: 600,
+   
+    },
+    sans: {
+        fontFamily: 'sans-serif'     
     }
   });
 
@@ -140,27 +160,39 @@ class Question extends React.Component {
             return (
                     <Grid container>
                         <Grid item xs={12}>
-                            <Grid  className={answerStyle}   container spacing={3}>
+                            <Grid  className={answerStyle} container>
                                 <Grid className={classes.label}  item xs={4}>
-                                Submitted:
+                                <Box p={1} >
+                                    Submitted:
+                                </Box>
                                 </Grid>
-                                <Grid item xs={8}>
-                                     {(this.state.playerAnswer)? renderHTML(this.state.playerAnswer) : '<no answer>'}
+                                <Grid   className={classes.content} item xs={8}>
+                                <Box p={1} >
+                                    {(this.state.submittedAnswer)? renderHTML(this.state.playerAnswer) : '<no answer>'}
+                                </Box>
                                 </Grid>
                                 <Grid item xs={12}>
                         {this.state.showAnswer &&
                             <Grid container>
                                 <Grid className={classes.label}  item xs={4}>
-                                Correct Answer:
+                                    <Box p={1} >
+                                        Correct Answer:
+                                    </Box>
                                 </Grid>
-                                <Grid item xs={8}>
+                                <Grid  className={classes.content} item xs={8}>
+                                <Box p={1} >
                                     {renderHTML(this.state.answer)}
+                                </Box>
                                 </Grid>
                                 <Grid className={classes.label}  item xs={4}>
-                                Points&nbsp;Earned: 
+                                <Box p={1} >
+                                    Points&nbsp;Earned: 
+                                </Box>
                                 </Grid>
-                                <Grid item xs={8}>
+                                <Grid  className={classes.content} item xs={8}>
+                                    <Box p={1}>
                                     {this.state.pointsEarned}
+                                    </Box>
                                 </Grid>
                             </Grid>
                         }
@@ -182,11 +214,11 @@ class Question extends React.Component {
             return(
                 
                 <Grid container>
-                    <Grid item xs={6}>Category: {qObj.category}</Grid><Grid item xs={6}>Difficulty: {qObj.difficulty} </Grid>
+                    <Grid className={classes.sans} item xs={6}><Box className={classes.questionDataHd} component="span">Category:</Box> {qObj.category}</Grid><Grid className={classes.sans}  item xs={6}><Box className={classes.questionDataHd} component="span">Difficulty: {qObj.difficulty} </Box></Grid>
                     <Grid item xs={12} >
                         <Box  p={3}>                
                         <FormControl component="fieldset">
-                        <FormLabel component="legend" >{renderHTML(qObj.question)}</FormLabel>
+                        <FormLabel className={classes.question} component="legend" >{renderHTML(qObj.question)}</FormLabel>
                         <RadioGroup aria-label="playerAnswer" name="playerAnswer" value={this.state.playerAnswer} onChange={this.handleChange}>
                         {radios}
                         </RadioGroup>

@@ -3,18 +3,28 @@ import "./player.css";
 import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
 import Grid from '@material-ui/core/Grid';
+import Box from '@material-ui/core/Box';
+import { green } from '@material-ui/core/colors';
+
+//const label = {color: green['600'], justify: 'flex-end', fontWeight: 600,fontSize:'16px'};
+//const content = {border: '1px solid lightGray', justify:"flex-start" ,fontSize:'16px'};
 
 const styles = theme => ({
 
     label: {
-        color: '#75fa83',
+        color: green[600],
         fontWeight: 600,
-        fontSize: '14px',
+        fontSize: '20px',
         fontFamily: "Chelsea Market"
     },
     content: {
-        fontSize: '12px',
+        fontSize: '18px',
         fontFamily: "Chelsea Market"
+    },    
+    contentGray: {
+        fontSize: '18px',
+        fontFamily: "Chelsea Market",
+        background: 'lightGray'
     }
     
   });
@@ -26,7 +36,8 @@ class PlayerListScores extends React.Component{
         const playersArray = (!props.players || props.players.length === 0) ? ['Waiting for Players to join'] : props.players; 
         this.player = props.thisPlayer;
         this.state = {
-            players: playersArray
+            players: playersArray,
+            showScore: props.showScore
         };
     }
     
@@ -38,25 +49,32 @@ class PlayerListScores extends React.Component{
         console.log("PlayersList received players update %o",playerArray);
     }
 
+    /* alternating row styling */
+    getClass(index){
+        const { classes } = this.props;
+        return (index %2 == 0 )  ? classes.content : classes.contentGray;
+    }
+
     render(){
         let playerItems = '';
         const { classes } = this.props;
 
         if(this.state.players){
-            playerItems = this.state.players.map((player) => 
-                                [
-                                <Grid key={player.name} xs={4} item>{ player.name }{ player.name === this.player && <span> (you) </span> }</Grid>,
-                                <Grid key={player.connected} xs={4} item>{ (player.connected)? 'Yes' : 'No' }</Grid>,
-                                <Grid key={player.score} xs={4} item>{ player.score }</Grid>
-                                ]
-                                ) 
+            playerItems = this.state.players.map((player,index) => 
+                        
+                    [
+                    <Grid className={this.getClass(index)} key={player.name} xs={4} item>{ player.name }{ player.name === this.player && <span> (you) </span> }</Grid>,
+                    <Grid className={this.getClass(index)}  key={player.connected} xs={4} item>{ (player.connected)? 'Yes' : 'No' }</Grid>,
+                    <Grid className={this.getClass(index)}  key={player.score} xs={4} item>{(this.state.showScore)?player.score : '' }</Grid>
+                    ] 
+                ) 
         }
         
         return(
            <Grid container>
                 <Grid className={classes.label}  key={'title'} xs={4} item>Player</Grid>
                 <Grid  className={classes.label}  key={'connected'} xs={4} item>Connected?</Grid>
-                <Grid className={classes.label}  key={'score'} xs={4} item>Score</Grid>
+                <Grid className={classes.label}  key={'score'} xs={4} item>{(this.state.showScore)? 'Score': ''}</Grid> 
                 {playerItems}
             </Grid>
         );
