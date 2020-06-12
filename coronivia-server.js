@@ -20,7 +20,7 @@ const MAX_ROUNDS = 50;
 // timing intervals
 const GAME_START_COUNTDOWN = 3;
 const ROUND_LABEL_TIMER = 3;
-const QUESTION_COUNTDOWN = 10;
+const QUESTION_COUNTDOWN_DEFAULT = 15;
 const SHOW_ANSWER_TIMER = 5;
 const SHOW_SCORES_TIMER = 7;
 
@@ -68,8 +68,16 @@ function handleNewSocketConnection(socket){
      if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
      console.log('Number of rounds set to: ' + rounds);
  
+     let question = data.rounds;
+     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
+     console.log('Number of rounds set to: ' + rounds);
+
+     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
+
+     let pauseBetweenRounds = data.pauseBetweenRounds ? data.pauseBetweenRounds : false;
+
      // create a new game room with the supplied parameters and add it to the list of games
-    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds);
  
      gameRoomArray[game.roomName] = game;
      console.log("Room Created: %o",game);
@@ -298,13 +306,13 @@ server.listen(port, () => console.log(`Listening on port ${port}`));
   @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
   @param callback Function to call once the countdown has elapsed
 */
-function createTimer(roomName,secs,event,message,gameRoom,callback){
+function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback){
   
   console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
-
+  let interval = secs; // Used for calculating the % time remaining on the client side
   let timer = setInterval(()=>{
 
-    io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: true }); // Update all the scores
+    io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
     secs--;
     if(secs === 0){
       clearInterval(timer);
@@ -475,7 +483,7 @@ function shuffle(array) {
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
 
-  constructor(owner,rounds,questionCount,difficulty) {
+  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
@@ -489,6 +497,8 @@ class GameRoom{
       this.players = [];
       this.gameStatus = 'WAITING';
       this.currentRoundNumber = 0;
+      this.questionCountdown = questionCountdown;
+      this.pauseBetweenRounds = pauseBetweenRounds;
   }
 
   /* Retrieves a player by name 
@@ -575,7 +585,7 @@ class GameRoom{
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
       let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
       console.log("Starting " + roundTitle);
-      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,gameRoom,gameRoom.playRound);
+      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,false,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
       gameRoom.endGame();
     }
@@ -611,6 +621,7 @@ class GameRoom{
     @param totalQuestions The count of questions in this round.  
   */
   sendNextQuestion(question,currentRoundNumber, questionNumber, totalQuestions){
+   
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
@@ -619,7 +630,7 @@ class GameRoom{
     
     io.to(this.roomName).emit('question',data);
 
-    createTimer(this.roomName,QUESTION_COUNTDOWN,'countdown-question',questionTitle,this,this.sendAnswer);
+    createTimer(this.roomName,this.questionCountdown,'countdown-question',questionTitle,true,this,this.sendAnswer);
   }
 
   /* Shows the answer to the current question and calls playRound after an interval.
@@ -634,7 +645,8 @@ class GameRoom{
   io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
   let answerTitle = 'Answer';
   currentRoundObj.currentQuestionNumber++;
-  createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
+  //createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
+  createTimer(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,false,gameRoom,gameRoom.playRound);
 }
 
   /* Ends the current round and sends player-change data, followed by a show-scores timed message 
@@ -645,8 +657,10 @@ class GameRoom{
     console.log("Ending Round "+this.currentRoundNumber);
     io.to(this.roomName).emit('round-end',this.getPlayerInfo());
     this.currentRoundNumber++;
-    let roundMessage = 'Scores after Round '+ this.currentRoundNumber;
-    createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
+    let roundMessage = (this.rounds == this.currentRoundNumber)?'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
+    
+    // createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
+    createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,this.startRound);
   }
 
   /* Tells the clients the game is over. Emits a game ending event and closes all the sockets
@@ -655,7 +669,7 @@ class GameRoom{
   endGame(){
     let winningPlayerArray = this.getWinners();
     console.log("sending winner array: %o ",winningPlayerArray);
-    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray});
+    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
     console.log("Closing all the sockets for room "+gameRoom.roomName);
     this.players.forEach(player=>{
       player.socket.disconnect(true);

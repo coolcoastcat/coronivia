@@ -5,6 +5,19 @@ email, or any other method with the owners of this repository before making a ch
 
 Please note we have a [code of conduct](/code_of_conduct.md), please follow it in all your interactions with the project.
 
+## Prerequisites
+* Install [git](https://gist.github.com/derhuerst/1b15ff4652a867391f03)
+* Install [node](https://nodejs.org/en/download/)
+* Install [yarn](https://classic.yarnpkg.com/en/docs/getting-started)
+
+## Clone the repository and build
+* Clone the repository to your local environment.  
+* In the top folder run `yarn install`
+* cd to the client folder and run `yarn install`
+
+## Test it
+* In /coronivia run `yarn dev` to start the server running at [http://localhost:5000](http://localhost:5000) and the React app at [http://localhost:3000](http://localhost3000)
+
 ## Pull Request Process
 
 1. Ensure any install or build dependencies are removed before the end of the layer when doing a 

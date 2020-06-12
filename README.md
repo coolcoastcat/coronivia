@@ -2,7 +2,18 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.3 - Current__
+__v0.0.4 - Current__
+* Fully implemented Material UI with consistent UI and visual niceties such as countdown timer for questions
+* Worked to make dialogs and particularly question text more visible.
+* Added form validation
+
+Known Issues
+* Some console errors being thrown
+* Player leave game isn't working
+* After a correct answer submit, a no answer shows as correct
+* Joining after the game starts is a bad experience for the joiner
+
+__v0.0.3__
 * Steel threaded the game flow for multiple users
 * Added Material UI for some components
 * Lots of refactoring. Moved classes out of index.js

@@ -22,7 +22,8 @@ export class GamePlay extends React.Component{
             showQuestion:false,
             showEndgame:false,
             countdownData: null,
-            leaveGame: false
+            leaveGame: false,
+            interval: null
         }
         this.winningPlayerArray = [];
         this.setUpEventHandlers();
@@ -37,13 +38,13 @@ export class GamePlay extends React.Component{
         /* Handles a new question */
         this.socket.on('question',(data)=>{
             console.log("Received question event with data: %o", data);
-            this.setState({question:data,showScores:false,showQuestion:true});
+            this.setState({question:data,showScores:false,showQuestion:true, interval:data.interval});
             this.questionElement.current.setQuestion(data);
         });
 
 
         this.socket.on('round-end',(playerArray) =>{
-            this.setState({players: playerArray, showQuestion:false, showScores: true})
+            this.setState({players: playerArray})
            // this.playerListElement.current.updatePlayers(this.state.players); // Update the child
             console.log('event: round-end with data: %o',playerArray);
           });
@@ -56,7 +57,7 @@ export class GamePlay extends React.Component{
         */
         this.socket.on('countdown-question',(data) =>{
             console.log('countdown-question event: %o',data);
-            this.setState({countdownData: data,timerText: data.timerMessage+": "+data.count});
+            this.setState({countdownData: data,timerText: data.timerMessage, interval:data.interval});
         });
 
             /* General handler for countdown answer timers received from the server.
@@ -65,14 +66,14 @@ export class GamePlay extends React.Component{
             @param data.showCountdown Boolean of whether to show the digits counting down
         */
         this.socket.on('countdown-answer',(data) =>{ // bascially a no-op
-            console.log('countdown-answer event: %o',data);
+            console.log('countdown-answer event: %o',data,);
         });
         
         /* Nulls the countdownData which hides the countdown component
         */
         this.socket.on('clear-countdown',(data) =>{
             console.log('clear-countdown event');
-            this.setState({countdownData: null,timerText: ''});
+            this.setState({countdownData: null,timerText: '', interval:0});
         });
 
         /* Handler for countdown round timers received from the server.
@@ -82,7 +83,10 @@ export class GamePlay extends React.Component{
         */
         this.socket.on('countdown-round',(data) =>{
             console.log('countdown-round event: %o',data);
-            this.setState({countdownData: data,timerText: data.timerMessage});
+            this.setState({countdownData: data,
+                            timerText: data.timerMessage, 
+                            interval:data.interval,
+                            showScores: false});
         });
 
         /* Handler for countdown endround timers received from the server.
@@ -91,7 +95,11 @@ export class GamePlay extends React.Component{
         */
        this.socket.on('countdown-endround',(data) =>{
         console.log('countdown-endround event: %o',data);
-        this.setState({countdownData: data,timerText:data.timerMessage});
+        this.setState({countdownData: data,
+                        timerText:data.timerMessage, 
+                        interval:data.interval,
+                        showQuestion:false, 
+                        showScores: true});
         });
 
 
@@ -99,9 +107,10 @@ export class GamePlay extends React.Component{
             @param data.winningPlayerArray The list of player(s) with the highest score
         */
         this.socket.on('game-ended',(data) =>{
-            this.winningPlayerArray = data.winningPlayerArray;
-            this.setState({showScores: false, showEndgame: true});
             console.log('event: game-end with data: %o',data);
+            this.winningPlayerArray = data.winningPlayerArray;
+            this.setState({showScores: false, showEndgame: true,countdownData: data});
+       
     
         });
 
@@ -131,8 +140,13 @@ export class GamePlay extends React.Component{
         if(this.state.showScores) {
             return(
                 <Box>
-                    <QuestionDialog showQuestion={this.state.showQuestion} timerText={this.state.timerText} dialogTitle={this.state.questionDialogTitle} >
-                        <PlayerListScores players={this.state.players} ref={this.playerListElement} />
+                    <QuestionDialog showQuestion={this.state.showQuestion} 
+                                    timerText={this.state.timerText} 
+                                    dialogTitle={this.state.questionDialogTitle}
+                                    >
+                        <PlayerListScores players={this.state.players} 
+                                        ref={this.playerListElement}
+                                        showScore={true} />
                     </QuestionDialog>
                 </Box> 
             );
@@ -142,7 +156,14 @@ export class GamePlay extends React.Component{
         if(this.state.showQuestion){
             return(
                 <Box>
-                    <QuestionDialog showQuestion={this.state.showQuestion} timerText={this.state.timerText} dialogTitle={this.state.questionDialogTitle} >
+                    <QuestionDialog showQuestion={this.state.showQuestion} 
+                                    timerText={this.state.timerText} 
+                                    dialogTitle={this.state.questionDialogTitle} 
+                                    count={(this.state.countdownData)?this.state.countdownData.count: 0}
+                                    interval={this.state.interval?this.state.interval:1}
+                                    showTimerText={true}
+                                    showSeconds={true}
+                                    >
                         <Question gameRoomName={this.gameConfig.roomname} 
                                     thisPlayer={this.gameConfig.player} 
                                     socket={this.socket} 
@@ -156,7 +177,12 @@ export class GamePlay extends React.Component{
         if(this.state.showEndgame){
             return(
                 <Box>
-                    <QuestionDialog showQuestion={this.state.showQuestion} timerText={this.state.timerText} dialogTitle={this.state.questionDialogTitle} >
+                    <QuestionDialog showQuestion={this.state.showQuestion} 
+                                    timerText={this.state.timerText} 
+                                    dialogTitle={this.state.questionDialogTitle} 
+                                    count={this.state.countdownData.count}
+                                    interval={this.state.countdownData.interval}
+                                    showTimerText={false}>
                         <WinnerList leaveGame={this.handleLeaveGame}  winners={this.winningPlayerArray} />
                     </QuestionDialog>
                 </Box> 

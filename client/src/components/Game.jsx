@@ -1,20 +1,44 @@
 import React from 'react';
+import PropTypes from 'prop-types';
+import { withStyles } from '@material-ui/core/styles';
 import { Redirect } from "react-router-dom";
 import { GameInfo } from "./GameInfo";
 import { GamePlay } from "./GamePlay";
-import { CreateGameForm, JoinGameForm } from "./forms";
+import { JoinGameForm } from "./forms";
 import PlayerListScores from './PlayerListScores';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
-import { Button } from "./Button";
+import Paper from '@material-ui/core/Paper';
+import Button from '@material-ui/core/Button';
 import AlertDialog from "./AlertDialog";
-
+import Icon from '@material-ui/core/Icon';
+import AssignmentTwoToneIcon from '@material-ui/icons/AssignmentTwoTone';
+import AssignmentTurnedInTwoToneIcon from '@material-ui/icons/AssignmentTurnedInTwoTone';
+import { green } from '@material-ui/core/colors';
+import TextField from '@material-ui/core/TextField';
+import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 
 import io from "socket.io-client/lib";
+import Constants  from "./constants";
+import QuestionDialog from "./QuestionDialog";
+ 
 
-/////////////  CONSTANTS /////////////  
-const SERVER_URI = "http://localhost:5000";
+
+const styles = theme => ({
+  colorfulButton: {
+    background: 'linear-gradient(45deg, #32a852 30%, #d8e038 90%)',
+    border: 0,
+    borderRadius: 3,
+    boxShadow: '0 3px 5px 2px rgba(245, 250, 155, .3)',
+    color: 'white',
+    height: 48,
+    padding: '0 30px',
+  }, 
+  mainGrid: {
+    padding: theme.spacing(2)
+  }
+});
 
 /////////////// HELPER FUNCTIONS /////////////
 
@@ -28,145 +52,12 @@ function getBaseURL(){
 function useQuery() {
     return new URLSearchParams(window.location.search);
   }
-  const ERROR_PHRASES = ['Aww snap!',
-                        'Trouble down at mill!',
-                        'Sad news friend!',
-                        "Wouldn't you just know it?",
-                        'Fiddlesticks!',
-                        'Poop!',
-                        'Bad luck friend!',
-                        'Nothing to see here, citizen.',
-                        'A very tinny result.',
-                        'Uh, O Spagetti-os!',
-                        "It's a trap!",
-                        "Dammit!",
-                        'Seriously?',
-                        'For the love of Pete!',
-                        'Since the dawn of time, mankind has experienced errors...',
-                        'Blammo!',
-                        'Son of a biscuit!',
-                        'Bummer dude!',
-                        "I just can't do it captain!",
-                        'Who would have thunk it?',
-                        "Well, I'll be go to hell.",
-                        'Shiiiooot!',
-                        'Danger Will Robinson!',
-                        'So say we all.',
-                        'By the Hammer of Grabthar!',
-                        'There can be only one!',
-                        'Doh!'
-                      ];
+
   /* Get a random funny error phrase to prefix dialogs */
-  function getErrorPhrase(){
-    return ERROR_PHRASES[Math.floor(Math.random() * ERROR_PHRASES.length)];
+function getErrorPhrase(){
+  return Constants.ERROR_PHRASES[Math.floor(Math.random() * Constants.ERROR_PHRASES.length)];
   }
-
-/////////////// CLASS DEFINTIONS /////////////
-
-/* CreateGame includes the CreateGameForm and passeses in a function-as-prop
-   to have the form, on submit, set the form parameters into CreateGame object
-   in order to fetch from the server create-game api. The returned JSON will be
-   used to show the user 
-*/
-export class CreateGame extends React.Component{
-    constructor(props){
-      super(props);
-      this.state = { 
-        created: false,
-        joined: false
-      }
-      this.gameConfig = {}; // The parsed config to send to Game
-      this.createdGameResponseJSON = {}; // Raw JSON response from the Server create-game API
-      this.handleFormSubmit = this.handleFormSubmit.bind(this);
-      this.playerListElement = React.createRef(); // Bind to Game method for passing status
-      this.socket = null;
-  
-    }
-  
-    setUpEventHandlers(){
-    
-      this.socket.on('game-joined',(data)=>{
-        this.setState({created: true});
-        console.log("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
-      });
-  
-      this.socket.on('player-change',(data) =>{
-        console.log('CreateGame event: player-change with data: %o',data);
-        this.playerListElement.current.updatePlayers(data); // Update the child Game
-      });
-  
-      this.socket.on('error',(data) => {
-        console.log('event: error with data: %o',data);
-      });
-    }
-  
-    handleJoinErrors(errorMsg){
-      confirmAlert({
-        title: getErrorPhrase(),
-        message: errorMsg,
-        buttons: [
-          {
-            label: 'Ok',
-            onClick: () => {}
-          }
-        ]
-      });
-    }
-  
-    /* Function passed to CreateGameForm to accept form data to submit to backend API 
-    */ 
-    handleFormSubmit(createGameData){
-  
-      this.socket = io(SERVER_URI);
-      this.setUpEventHandlers();
-      this.socket.on('connect',() =>{
-        console.log('client socket connected with id: '+this.socket.id);
-        
-        // Handle case if Owner's client got disconnected 
-        // TODO: consider checking with server if game exists. It's possible the game server got restarted
-        //       and all games flushed. If so, message should be shown and game should be recreated.
-        if(!this.state.created){
-        // Create the game on the server
-        this.socket.emit('create-game',{rounds:createGameData.rounds,
-                                        questions:createGameData.questions,
-                                        difficulty:createGameData.difficulty, 
-                                        owner:createGameData.owner}, (createGameResp)=>{ // Process the server response
-                                          console.log("create-game API response: %o",createGameResp);
-                                          
-                                          this.gameConfig = createGameResp;
-                                          // Now join this game
-                                          this.socket.emit('join',{roomname: createGameResp.roomname, player: createGameResp.player},(data)=>{
-                                            if(data.success){
-                                              this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
-                                              console.log("Socket opened by: "+createGameResp.player+" to join the game: "+createGameResp.roomname);
-                                            } else {
-                                              // Handle errors
-                                              this.handleJoinErrors(data.error);
-                                              // this.socket.close(); // I think we want to retry in the create game case
-                                            }
-                                          }
-                                          );
-          });
-      
-      } else {
-        console.log("Game "+this.gameConfig.roomname+" already created");
-      }
-      });
-    }
-  
-    render() {
-      if(!this.state.created){
-        return(
-            <CreateGameForm handleFormSubmit={this.handleFormSubmit} />
-        );
-      } else {
-        return(
-          <Game gameConfig={ this.gameConfig }  ref={ this.playerListElement }  socket={ this.socket }  />
-        );
-      }
-    }
-  
-  }
+ 
   /* Game is the client intantiation of the game. It creates a websocket connection to the server to drive the 
     game state.
     @param rounds
@@ -177,7 +68,7 @@ export class CreateGame extends React.Component{
     @param player
     @param gameStatus
   */
-  export class Game extends React.Component{
+class Game extends React.Component{
     constructor(props){
       super(props);
       console.log("Game constructor received props: o%",props);
@@ -188,7 +79,10 @@ export class CreateGame extends React.Component{
         leaveGame: false, 
         serverConnection: 'disconnected',
         isLoading: true,
-        error: null
+        error: null,
+        copied: false,
+        confirmCancel: false,
+        confirmLeave: false
       };
       this.socket = props.socket;
       this.setUpEventHandlers();
@@ -211,7 +105,9 @@ export class CreateGame extends React.Component{
   
       this.setState({players: playerArray});
       console.log("updating PlayerList with %o",this.state.players);
-      this.playerListElement.current.updatePlayers(this.state.players); // Update the child
+      if(this.playerListElement.current){
+        this.playerListElement.current.updatePlayers(this.state.players); // Update the child
+      }
     }
   
      setUpEventHandlers(){
@@ -225,8 +121,10 @@ export class CreateGame extends React.Component{
     
       this.socket.on('player-change',(playerArray) =>{
         console.log('Game event: player-change with data: %o',playerArray);
-        this.setState({players: playerArray})
-        this.playerListElement.current.updatePlayers(this.state.players); // Update the child
+        this.setState({players: playerArray});
+        if(this.playerListElement.current){
+          this.playerListElement.current.updatePlayers(this.state.players); // Update the child
+        }
         console.log('new Game status: %o',this.state);
       });
     
@@ -332,7 +230,9 @@ export class CreateGame extends React.Component{
     }
     
     /* Handles the button click to start the game! */
-    handleCancelGame(){
+    handleCancelGame = ()=>{
+        this.setState({confirmCancel: false}); // Hide the cancel dialog
+
         console.log("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
         console.log('Cancel game result: %o',data);
@@ -342,65 +242,89 @@ export class CreateGame extends React.Component{
     }
   
     /* Handles the button click to start the game! */
-    handleLeaveGame(){
-      confirmAlert({
-        title: 'Leave the Game',
-        message: 'Do you really want to leave?',
-        buttons: [
-          {
-            label: 'Yes',
-            onClick: () => {
-              this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
-                console.log('Leaving game result: %o',data);
-  
-                // Redirect to join page
-                this.setState({leaveGame:true});
-                this.socket.close();
-              }  
-              );
-            }
-          },
-          {
-            label: 'No',
-            onClick: () => {}
-          }
-        ]
-      });
+    handleLeaveGame = ()=>{
+   
+        this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
+        console.log('Player '+this.gameConfig.player+' leaving game result: %o',data);
+        this.setState({leaveGame:true, confirmLeave: false});
+        this.socket.close();
+        });
+    }
+
+    /* Copies the game link text to the clipboard */
+    handleCopyLink(){
+      var copyText = document.getElementById("gameroom");
+      copyText.select();
+      document.execCommand("copy");
+      console.log("copied link to clipboard");
+      this.setState({copied: true});
+      return false;
+    }
+
+    /* Cancel the player leaving the game */
+    cancelLeave = ()=>{
+      this.setState({confirmCancel: false,confirmLeave: false});
     }
   
     render() {
+      const { classes } = this.props;
+      console.log("classes object: %o",classes);
+
       if(this.state.leaveGame){
         return <Redirect to='/' />
       }
+
+      if(this.state.confirmCancel){
+        return <QuestionDialog  showQuestion={true} 
+                                timerText={this.state.timerText} 
+                                dialogTitle={'Cancel the game?'}
+                                leaveGame={true} 
+                                stayCallback={this.cancelLeave}
+                                leaveCallback={this.handleCancelGame}>
+                                Do you really want to cancel the game? This will end the game for all players.
+                </QuestionDialog>;
+      }
+
+      if(this.state.confirmLeave){
+        return <QuestionDialog  showQuestion={true} 
+                                timerText={this.state.timerText} 
+                                dialogTitle={'Leave the game?'}
+                                leaveGame={true} 
+                                stayCallback={this.cancelLeave}
+                                leaveCallback={this.handleLeaveGame}>
+                                Do you really want to leave the game?
+                </QuestionDialog>;
+      }
       
       let headerMessage = 'Welcome to Game Room: '+this.gameConfig.roomname+'!';
-      let waitingButtons = <p><Button onClick={() => {this.handleLeaveGame();}}
+      let waitingButtons = <p><Button onClick={()=>this.setState({confirmLeave: true})}
                   type="button" 
-                  buttonSize="btn--small"
-                  buttonStyle='btn--warning--outline'>Leave the Game</Button></p>;
+                  variant="outlined" >Leave the Game</Button></p>;
       let playingButtons = waitingButtons;
   
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
         waitingButtons = <Box>
-            
-        <AlertDialog buttonContinueText={'Yes'} buttonCancelText={'No'}
-                     dialogText={'Do you really want to cancel the game? This will end the game for all players.'} 
-                     dialogTitle={'Cancel the Game'} callback={this.handleCancelGame}>
-        Cancel Game</AlertDialog>
+        <Button type="submit" size="small" variant="contained" className={classes.colorfulButton}  onClick={this.handleStartGame}>
+        Start Game</Button>&nbsp;
+        <Button onClick={()=>this.setState({confirmCancel: true})}
+                  type="button" 
+                  variant="outlined" 
+                  >Cancel Game</Button>
+          {/* 
         <AlertDialog buttonContinueText={'Start'} buttonCancelText={'Wait some more'}
                      dialogText={'Click start to beging the game.'} 
                      dialogTitle={'Starting the Game'} callback={this.handleStartGame}>
-        Click Start to begin!</AlertDialog>
+        Click Start to begin!</AlertDialog>*/}
         </Box>;
         playingButtons = <Box>
         <Button onClick={() => {this.handleCancelGame();}}
-                  type="button" 
-                  buttonSize="btn--small"
-                  buttonStyle='btn--warning--outline'>End the Game</Button></Box>;
+                  type="button" >End the Game</Button></Box>;
   
   
       }
+      const gameURL = getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname;
+      const clipboardIcon = (this.state.copied)? <AssignmentTurnedInTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} /> :<AssignmentTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} />;
   
       if (this.state.error) { // REPLACE WITH DIALOG
         return <p>{ this.state.error }</p>;
@@ -411,12 +335,29 @@ export class CreateGame extends React.Component{
           return(
             <Box>
               <h2>{ headerMessage }</h2>
-              <Box>Share this link with other players: <br /> { getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname }</Box>
-              <Box p={3}>{this.state.players.length} { (this.state.players.length === 1) ? 'player': 'players' } waiting</Box>
-              <Box><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
-             
-              <Box><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
-              <Box>{waitingButtons}</Box>
+              <Paper>
+              <Box  p={2}>
+              <TextField id="gameroom" label='Share this link with other players' variant='outlined' value={gameURL} style={{  minWidth: 500}} size='small' />
+              {clipboardIcon}
+              </Box>
+              <Grid container>
+                
+                <Grid item sm={6}  style={{ padding: '5px'}} >
+                  <Paper elevation={3}>
+                    <Box p={1}><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
+                  </Paper>
+                </Grid>
+
+                <Grid  style={{ padding: '5px'}} item sm={6}>
+                  <Paper elevation={3}>
+                    <Box p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
+                  </Paper>
+                </Grid>
+              
+              </Grid>
+              
+              <Box p={2}>{waitingButtons}</Box>
+              </Paper>
             </Box>
           );
         
@@ -431,13 +372,19 @@ export class CreateGame extends React.Component{
         );
   
         case 'ENDED':
-          return(<PlayerListScores  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />);
+          return(<PlayerListScores showScore={true}  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />);
   
         default:
           return(<div>Really shouldn't get here</div>);
       }
     }
   }
+
+  Game.propTypes =  {
+    classes: PropTypes.object.isRequired,
+  };
+
+export default withStyles(styles)(Game);
 
   /* JoinGame includes the JoinGameForm and passeses in a function-as-prop
      to have the form, on submit, set the form parameters into JoinGame object
@@ -503,7 +450,7 @@ export class CreateGame extends React.Component{
     */ 
     handleFormSubmit(joinGameData){
     
-      this.socket = io(SERVER_URI);
+      this.socket = io(Constants.SERVER_URI);
       this.setUpEventHandlers();
       this.socket.on('connect',() =>{
         console.log('client socket connected with id: '+this.socket.id);
