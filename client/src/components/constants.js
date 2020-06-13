@@ -1,5 +1,5 @@
 export default {
-SERVER_URI:"http://localhost:5000",
+SERVER_URI:"https://coronivia-280216.wm.r.appspot.com",
 
  ERROR_PHRASES: ['Aww snap!',
  'Trouble down at mill!',

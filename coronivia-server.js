@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require("socket.io/lib");
+const path = require('path');
 
 
 const gameRoomArray = {};
@@ -27,6 +28,8 @@ const SHOW_SCORES_TIMER = 7;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
+app.use(express.static(path.join(__dirname, "/public")));
+
 
 ///////////////  WEBSOCKET CONFIGURATION ///////////////
 const server = http.createServer(app);
@@ -1002,5 +1005,10 @@ if(!result.success){
   });
   res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
 })
+
+// Catch all route to send to the static React app
+app.get("/*",(req,res) => {
+  res.sendFile(path.join(__dirname, "/public/index.html"));
+});
 
 /////////////// API ENDPOINTS - END ///////////////
