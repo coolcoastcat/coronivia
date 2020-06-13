@@ -105,7 +105,12 @@ class Question extends React.Component {
         @param questionJSON.currentRoundNumber The current round number
     */
     setQuestion(questionJSON){
-        this.setState({showAnswer: false, submittedAnswer: false, playerAnswer: null, answer: ''});
+        this.setState({showAnswer: false, 
+                        submittedAnswer: false, 
+                        playerAnswer: null, 
+                        answer: '',
+                        answerisCorrect:false, 
+                        pointsEarned: 0}); // Reset answer state
         this.setState({questionObject: questionJSON.question, 
                         currentRoundNumber: questionJSON.currentRoundNumber,
                         questionNumber: questionJSON.questionNumber,
@@ -140,7 +145,7 @@ class Question extends React.Component {
                                     
                                     console.log('Answer successfully received and earned points: '+data.points);
                                 } else {
-                                    this.setState({submittedAnswer: true});
+                                    this.setState({submittedAnswer: true, playerAnswer: data.error});
                                     console.log('Error from server: '+data.error)
                                 }
                             });
