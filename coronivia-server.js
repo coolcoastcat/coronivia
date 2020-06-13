@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const cors = require('cors');
 const http = require('http');
 const socketIo = require("socket.io/lib");
+const path = require('path');
 
 
 const gameRoomArray = {};
@@ -27,6 +28,8 @@ const SHOW_SCORES_TIMER = 7;
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cors());
+app.use(express.static(path.join(__dirname, "/public")));
+
 
 ///////////////  WEBSOCKET CONFIGURATION ///////////////
 const server = http.createServer(app);
@@ -270,10 +273,12 @@ function handleNewSocketConnection(socket){
         pointsEarned = points;
         console.log("Player earned: "+points);
       }
+      callback({success: true, points: pointsEarned});
     } else {
       console.log("Player was too late answering question and no current question exists!");
+      callback({ success: false, error: 'Answer was too late!'});
     }
-    callback({success: true, points: pointsEarned})
+  
   });
 
   ///////// Utility Socket Message Handlers /////////
@@ -311,10 +316,9 @@ function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback
   console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
   let interval = secs; // Used for calculating the % time remaining on the client side
   let timer = setInterval(()=>{
-
     io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
     secs--;
-    if(secs === 0){
+    if(secs == -2){
       clearInterval(timer);
       io.to(roomName).emit('clear-countdown',{});
       callback(gameRoom);
@@ -1001,5 +1005,10 @@ if(!result.success){
   });
   res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
 })
+
+// Catch all route to send to the static React app
+app.get("/*",(req,res) => {
+  res.sendFile(path.join(__dirname, "/public/index.html"));
+});
 
 /////////////// API ENDPOINTS - END ///////////////

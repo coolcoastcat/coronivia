@@ -15,6 +15,9 @@ test*
 
 # production
 /build
+client/build
+/public/*
+!/public/README.md
 
 # misc
 .DS_Store
