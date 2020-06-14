@@ -14,6 +14,11 @@ import {
 } from "react-router-dom";
 import Box from '@material-ui/core/Box';
 
+let devMsg = '';
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+  devMsg = '[development]';
+}
+
 /////////////  REACT ROUTES /////////////  
 export default function App() {
   return (
@@ -76,7 +81,7 @@ class Landing extends React.Component {
     return(
       <Box>
         <Box>
-          <h1 >Welcome to Coronivia!</h1>
+          <h1 >Welcome to Coronivia! {devMsg}</h1>
         </Box>
          <Link to="/create">
            <Button onClick={() => {console.log("Clicked on Create Game")}}

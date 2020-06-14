@@ -3,15 +3,20 @@ import Game from './Game';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import io from "socket.io-client/lib";
 import { CreateGameForm } from "./forms";
-import Constants  from "./constants";
+import config  from "./config";
 
-
+let SERVER_URI = null;
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+  SERVER_URI = config.DEV_SERVER_URI;
+} else {
+  SERVER_URI = config.PROD_SERVER_URI;
+}
 
 
  
 /* Get a random funny error phrase to prefix dialogs */
 function getErrorPhrase(){
-return Constants.ERROR_PHRASES[Math.floor(Math.random() * Constants.ERROR_PHRASES.length)];
+return config.ERROR_PHRASES[Math.floor(Math.random() * config.ERROR_PHRASES.length)];
 }
 
 /////////////// CLASS DEFINTIONS /////////////
@@ -70,7 +75,7 @@ onClick: () => {}
 */ 
 handleFormSubmit(createGameData){
 
-this.socket = io(Constants.SERVER_URI);
+this.socket = io(SERVER_URI);
 this.setUpEventHandlers();
 this.socket.on('connect',() =>{
 console.log('client socket connected with id: '+this.socket.id);
