@@ -25,6 +25,13 @@ const styles = theme => ({
         fontSize: '18px',
         fontFamily: "Chelsea Market",
         background: 'lightGray'
+    },
+    disconnected: {
+        color: 'gray',
+        fontStyle: 'italic'
+    },
+    none: {
+
     }
     
   });
@@ -33,13 +40,25 @@ class PlayerListScores extends React.Component{
     constructor(props){
         super(props)
         console.log("PlayerList constructed with props: %o",props);
-        const playersArray = (!props.players || props.players.length === 0) ? ['Waiting for Players to join'] : props.players; 
         this.player = props.thisPlayer;
         this.state = {
-            players: playersArray,
+            players: (props.players) ? props.players : null,
             showScore: props.showScore
         };
+        this.MAX_NAME_LENGTH = 10;
     }
+
+    truncatePlayerName(str) {
+        if(!str) { return null;}
+        // If the length of str is less than or equal to num
+        // just return str--don't truncate it.
+        if (str.length <= this.MAX_NAME_LENGTH) {
+          return str;
+        }
+        // Return str truncated with '...' concatenated to the end of str.
+        return str.slice(0, (this.MAX_NAME_LENGTH - 3)) + '...';
+      }
+      
     
     /* Method bound to Parent reference so that Parent can pass in updates to the playerArray and force a refresh 
         @param playerArray The updated player array to show.
@@ -58,23 +77,22 @@ class PlayerListScores extends React.Component{
     render(){
         let playerItems = '';
         const { classes } = this.props;
-
+        console.log("DEBUG: Players array: %o",this.state.players)
         if(this.state.players){
-            playerItems = this.state.players.map((player,index) => 
-                        
-                    [
-                    <Grid className={this.getClass(index)} key={player.name} xs={4} item>{ player.name }{ player.name === this.player && <span> (you) </span> }</Grid>,
-                    <Grid className={this.getClass(index)}  key={player.connected} xs={4} item>{ (player.connected)? 'Yes' : 'No' }</Grid>,
-                    <Grid className={this.getClass(index)}  key={player.score} xs={4} item>{(this.state.showScore)?player.score : '' }</Grid>
-                    ] 
+            playerItems = this.state.players.map((player,index) => {
+                let connectedStyle = (!player.connected)? classes.disconnected : classes.none;
+                return([
+                    <Grid className={this.getClass(index)} key={player.name} xs={4} item><span className={connectedStyle}>{ this.truncatePlayerName(player.name) }</span>{ player.name === this.player && <span> (you) </span> }</Grid>,
+                    <Grid className={this.getClass(index)}  key={player.score} xs={8} item>{(this.state.showScore)?player.score : '' }</Grid>
+                    ])
+                }
                 ) 
         }
         
         return(
            <Grid container>
-                <Grid className={classes.label}  key={'title'} xs={4} item>Player</Grid>
-                <Grid  className={classes.label}  key={'connected'} xs={4} item>Connected?</Grid>
-                <Grid className={classes.label}  key={'score'} xs={4} item>{(this.state.showScore)? 'Score': ''}</Grid> 
+                <Grid className={classes.label}  key={'title'} xs={4} item>Players</Grid>
+                <Grid className={classes.label}  key={'score'} xs={8} item>{(this.state.showScore)? 'Score': ''}</Grid> 
                 {playerItems}
             </Grid>
         );

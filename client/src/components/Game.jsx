@@ -20,9 +20,15 @@ import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 
 import io from "socket.io-client/lib";
-import Constants  from "./constants";
+import config  from "./config";
 import QuestionDialog from "./QuestionDialog";
- 
+
+let SERVER_URI = null;
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
+  SERVER_URI = config.DEV_SERVER_URI;
+} else {
+  SERVER_URI = config.PROD_SERVER_URI;
+}
 
 
 const styles = theme => ({
@@ -55,7 +61,7 @@ function useQuery() {
 
   /* Get a random funny error phrase to prefix dialogs */
 function getErrorPhrase(){
-  return Constants.ERROR_PHRASES[Math.floor(Math.random() * Constants.ERROR_PHRASES.length)];
+  return config.ERROR_PHRASES[Math.floor(Math.random() * config.ERROR_PHRASES.length)];
   }
  
   /* Game is the client intantiation of the game. It creates a websocket connection to the server to drive the 
@@ -333,11 +339,14 @@ class Game extends React.Component{
       switch(this.state.gameStatus){
         case 'WAITING':
           return(
-            <Box>
-              <h2>{ headerMessage }</h2>
+            <Grid container>
+              <Grid item sm={12}>
+                <h2>{ headerMessage }</h2>
+              </Grid>
+              <Grid item sm={12}>
               <Paper>
               <Box  p={2}>
-              <TextField id="gameroom" label='Share this link with other players' variant='outlined' value={gameURL} style={{  minWidth: 500}} size='small' />
+              <TextField id="gameroom" label='Share this link' variant='outlined' value={gameURL} style={{  minWidth: 200}} size='small' />
               {clipboardIcon}
               </Box>
               <Grid container>
@@ -358,17 +367,16 @@ class Game extends React.Component{
               
               <Box p={2}>{waitingButtons}</Box>
               </Paper>
-            </Box>
+              </Grid>
+            </Grid>
           );
         
         case 'PLAYING':
        
         return(
-          <Box>
-            <Box><GamePlay gameConfig={ this.gameConfig } socket={ this.socket }  /></Box>
-            <Box><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
-            <Box>{ playingButtons }</Box>
-          </Box>
+          <Grid container>
+            <Grid item xs={12}><GamePlay gameConfig={ this.gameConfig } socket={ this.socket }  /></Grid>
+          </Grid>
         );
   
         case 'ENDED':
@@ -449,8 +457,8 @@ export default withStyles(styles)(Game);
       @param joinGameData Data collected from the JoinGameForm
     */ 
     handleFormSubmit(joinGameData){
-    
-      this.socket = io(Constants.SERVER_URI);
+
+      this.socket = io(SERVER_URI);
       this.setUpEventHandlers();
       this.socket.on('connect',() =>{
         console.log('client socket connected with id: '+this.socket.id);

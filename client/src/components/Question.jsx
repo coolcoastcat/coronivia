@@ -50,7 +50,8 @@ const styles = theme => ({
         fontSize: '25px',
         // background: 'lightGray',
         background: 'linear-gradient(45deg, #b1fac5 30%, #f9fcbd 90%)',
-        padding: '4px 5px'
+        padding: '4px 5px',
+        fontFamily: 'sans-serif'
     },
     questionDataHd: {
         fontSize: '14px',
@@ -159,6 +160,7 @@ class Question extends React.Component {
 
         if(this.state.submittedAnswer || this.state.showAnswer){
             let answerStyle = classes.none;
+            const qObj = this.state.questionObject;
              if(this.state.showAnswer){
                 answerStyle = this.state.answerisCorrect ? classes.correct: classes.incorrect;
              }
@@ -166,9 +168,10 @@ class Question extends React.Component {
                     <Grid container>
                         <Grid item xs={12}>
                             <Grid  className={answerStyle} container>
+                                <Grid className={classes.question} item >{renderHTML(qObj.question)}</Grid>
                                 <Grid className={classes.label}  item xs={4}>
                                 <Box p={1} >
-                                    Submitted:
+                                    Sent:
                                 </Box>
                                 </Grid>
                                 <Grid   className={classes.content} item xs={8}>
@@ -181,7 +184,7 @@ class Question extends React.Component {
                             <Grid container>
                                 <Grid className={classes.label}  item xs={4}>
                                     <Box p={1} >
-                                        Correct Answer:
+                                        Answer:
                                     </Box>
                                 </Grid>
                                 <Grid  className={classes.content} item xs={8}>
@@ -191,7 +194,7 @@ class Question extends React.Component {
                                 </Grid>
                                 <Grid className={classes.label}  item xs={4}>
                                 <Box p={1} >
-                                    Points&nbsp;Earned: 
+                                    Points: 
                                 </Box>
                                 </Grid>
                                 <Grid  className={classes.content} item xs={8}>

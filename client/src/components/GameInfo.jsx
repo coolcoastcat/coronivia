@@ -12,13 +12,23 @@ export class GameInfo extends React.Component{
         super(props)
         console.log("GameInfo constructed with props: %o",props);
         this.gameConfig = props.gameConfig;
+        this.MAX_NAME_LENGTH = 10;
     }
     
+    truncatePlayerName(str) {
+        if(!str) { return null;}
+        // If the length of str is less than or equal to num
+        // just return str--don't truncate it.
+        if (str.length <= this.MAX_NAME_LENGTH) {
+          return str;
+        }
+        // Return str truncated with '...' concatenated to the end of str.
+        return str.slice(0, (this.MAX_NAME_LENGTH - 3)) + '...';
+      }
 
     render(){
         return(
             <Grid container>
-
                 <Grid item xs={12}>
                 GAME INFO
                 </Grid>
@@ -88,7 +98,7 @@ export class GameInfo extends React.Component{
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
                     <Box p={1}>
-                    {this.gameConfig.owner}
+                    {this.truncatePlayerName(this.gameConfig.owner)}
                     </Box>
                 </Grid>            
 

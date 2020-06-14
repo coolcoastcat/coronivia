@@ -2,13 +2,22 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.5 - Current__
-* Bug fixes
+__v0.0.6 - Current__
+Bug fixes
+* [6 - Fix Unique Key Bug in PlayerListScores](https://github.com/coolcoastcat/coronivia/issues/6)
+* [21 - Mobile experience has multiple UI issues](https://github.com/coolcoastcat/coronivia/issues/21)
+
+Enhancements
+* Added question above the submitted answer
+* Added detection of dev vs prod environments for using different SERVER_URIs
+
+Known Issues
+* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
+
+__v0.0.5__
+Bug fixes
     * #[11](https://github.com/coolcoastcat/coronivia/issues/11) - Answer shown as correct after a correct answer followed by a no response.
     * Server timer events sent so timers go all the way to zero
-* Added 'advanced' create game options:
-    * Pause game between rounds - Owner clicks button to start next round
-    * Set the question timeout
 * Configured package.json and added `yarn package` script to build the client and stage files in `./public` for deployment to GCP
 * App is publicly available at https://coronivia-280216.wm.r.appspot.com/
 
