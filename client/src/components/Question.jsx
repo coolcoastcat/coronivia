@@ -10,7 +10,6 @@ import Button from '@material-ui/core/Button';
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import renderHTML from 'react-render-html';
-import { borders } from '@material-ui/system';
 
 const styles = theme => ({
     root: {

@@ -10,8 +10,6 @@ import { confirmAlert } from 'react-confirm-alert'; // Import
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
-import AlertDialog from "./AlertDialog";
-import Icon from '@material-ui/core/Icon';
 import AssignmentTwoToneIcon from '@material-ui/icons/AssignmentTwoTone';
 import AssignmentTurnedInTwoToneIcon from '@material-ui/icons/AssignmentTurnedInTwoTone';
 import { green } from '@material-ui/core/colors';
@@ -306,7 +304,6 @@ class Game extends React.Component{
       let waitingButtons = <p><Button onClick={()=>this.setState({confirmLeave: true})}
                   type="button" 
                   variant="outlined" >Leave the Game</Button></p>;
-      let playingButtons = waitingButtons;
   
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
@@ -323,10 +320,7 @@ class Game extends React.Component{
                      dialogTitle={'Starting the Game'} callback={this.handleStartGame}>
         Click Start to begin!</AlertDialog>*/}
         </Box>;
-        playingButtons = <Box>
-        <Button onClick={() => {this.handleCancelGame();}}
-                  type="button" >End the Game</Button></Box>;
-  
+ 
   
       }
       const gameURL = getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname;

@@ -5,6 +5,9 @@ import './index.css';
 import { Button } from "./components/Button";
 import {JoinGame } from "./components/Game";
 import {CreateGame} from "./components/CreateGame";
+import InfoTwoToneIcon from '@material-ui/icons/InfoTwoTone';
+import InfoDialog from "./components/InfoDialog";
+import { green } from '@material-ui/core/colors';
 import { Test } from "./test";
 import {
   BrowserRouter as Router,
@@ -76,12 +79,28 @@ function TestRoute() {
 
 
 class Landing extends React.Component {
-  
-  render() {
+  constructor(props){
+    super(props);
+    this.state = {
+      showInfoDialog: false
+    }
+  }
+
+  /* Handles the click of the info icon */
+  handleInfoClick = () => {
+    this.setState({showInfoDialog:true});
+  }
+
+   /* Handles the click of the info icon */
+   handleCloseInfoClick = () => {
+    this.setState({showInfoDialog:false});
+  }
+
+  render(){
     return(
       <Box>
         <Box>
-          <h1 >Welcome to Coronivia! {devMsg}</h1>
+          <h1 >Welcome to Coronivia! <InfoTwoToneIcon onClick={this.handleInfoClick} style={{ color: green[500] }} /> {devMsg}</h1>
         </Box>
          <Link to="/create">
            <Button onClick={() => {console.log("Clicked on Create Game")}}
@@ -95,6 +114,7 @@ class Landing extends React.Component {
            buttonSize="btn--medium"
            buttonStyle='btn--success--solid'>Join Game</Button>
         </Link>
+        <InfoDialog open={this.state.showInfoDialog} closeCallback={this.handleCloseInfoClick} />
       </Box>
     );
   }

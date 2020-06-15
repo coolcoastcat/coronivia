@@ -1,11 +1,9 @@
 import React from 'react';
 import { Redirect } from 'react-router';
-import './forms.css';
 import _ from 'lodash';
 
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
-import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
 import Select from '@material-ui/core/Select';
 import Box from '@material-ui/core/Box';
@@ -82,7 +80,6 @@ export function CreateGameForm(props) {
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
   
-    const createGameResponse = '';
 
     function handleRoundsChange(event) {
       setRounds(event.target.value);

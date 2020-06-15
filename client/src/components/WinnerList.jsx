@@ -2,10 +2,7 @@ import React from "react";
 
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
-import {
-    withStyles,
-    makeStyles,
-  } from '@material-ui/core/styles';
+import { makeStyles } from '@material-ui/core/styles';
 
   const useStyles = makeStyles((theme) => ({
     tieTitle: {
@@ -52,7 +49,7 @@ export default function WinnerList(props){
                     ]
                 );
         } else {
-            const pointText = (winners[0].score ==1)? 'point': 'points';
+            const pointText = (winners[0].score == 1)? 'point': 'points';
             winnerOutput = <Grid className={classes.tieTitle} item xs={12}>{winners[0].name} won the game with {winners[0].score} {pointText}!</Grid>
         }
         
