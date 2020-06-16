@@ -19,8 +19,6 @@ export default function QuestionDialog(props) {
     setOpen(false);    
   };
 
-
-
   let leaveContent = null; 
       if(leaveGame) { 
         leaveContent = <Box>
@@ -39,7 +37,7 @@ export default function QuestionDialog(props) {
         {(props.dialogTitle !== '') && <DialogTitle id="form-dialog-title">{props.dialogTitle}</DialogTitle> }
         <DialogContent>
         {(props.timerText !== '') &&
-          <DialogContentText style={{fontSize:'30px', verticalAlign: 'middle'}}>
+          <DialogContentText component={'span'}   style={{fontSize:'30px', verticalAlign: 'middle'}}>
             {props.timerText} <TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} />
           </DialogContentText>
         }
