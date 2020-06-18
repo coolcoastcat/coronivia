@@ -98,6 +98,7 @@ For a general overview to contributing to Open Source Projects, [view this guide
 * Form validation: [React Hook Form](https://react-hook-form.com/)
 * Declarative Routing: [React Router](https://reacttraining.com/react-router/web/guides/quick-start)
 * Socket.io: [Socket.io](https://socket.io/)
+* In-memory database : [PouchDB](https://pouchdb.com/)
 
 ### Additional Packages
 * [React Confirm Alert](https://www.npmjs.com/package/react-confirm-alert)

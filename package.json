@@ -4,22 +4,24 @@
   "license": "CC-BY-NC-SA-4.0",
   "description": "Server side socket.io API for the coronivia app",
   "main": "coronivia-server.js",
-  "bugs": { 
-    "url" : "https://github.com/coolcoastcat/coronivia/issues", 
-    "email" : "coronivia@gmail.com"
-    },
+  "bugs": {
+    "url": "https://github.com/coolcoastcat/coronivia/issues",
+    "email": "coronivia@gmail.com"
+  },
   "scripts": {
     "start": "node coronivia-server.js",
     "client": "cd client && yarn start",
     "server": "nodemon coronivia-server.js",
-    "package": "cd client && yarn build && cd .. && cp -r client/build/* ./public", 
-    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
+    "package": "cd client && yarn build && cd .. && cp -r client/build/* ./public",
+    "dev": "node trivia-database.js && concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
   },
   "dependencies": {
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
     "express": "^4.16.4",
     "node-fetch": "^2.6.0",
+    "pouchdb": "^7.2.1",
+    "pouchdb-find": "^7.2.1",
     "socket.io": "^2.3.0",
     "uuid": "^8.1.0"
   },

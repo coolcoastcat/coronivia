@@ -1,6 +1,5 @@
 import React from 'react';
 import { Redirect } from 'react-router';
-import './forms.css';
 import _ from 'lodash';
 
 import InputLabel from '@material-ui/core/InputLabel';
@@ -14,6 +13,11 @@ import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import { green } from '@material-ui/core/colors';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import {
   withStyles,
   makeStyles,
@@ -49,6 +53,13 @@ const useStyles = makeStyles((theme) => ({
   },
   borderIt: {
     width: '50%'
+  },
+  heading: {
+    
+  },
+  panel: {
+    maxWidth: 200,
+    textAlign: 'center'
   }
 }));
 
@@ -73,11 +84,11 @@ export function CreateGameForm(props) {
     const classes = useStyles();
 
     const MAX_ROUNDS = 10;
-    const MAX_QUESTIONS_PER_ROUND = 50;
+    const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
     const [rounds, setRounds] = React.useState(1);
     const [difficulty, setDifficulty] = React.useState('any');
-    const [questions, setQuestions] = React.useState(1);
+    const [questions, setQuestions] = React.useState(5);
     const [owner, setOwner] = React.useState('');
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
@@ -186,6 +197,24 @@ export function CreateGameForm(props) {
               { DIFFICULTIES.map(difficulty => <MenuItem key={difficulty} value={difficulty}>{difficulty}</MenuItem>) }  
             </Select>
             </FormControl>
+          </Grid>
+
+          <Grid item xs={12}>
+           <ExpansionPanel className={classes.panel}>
+            <ExpansionPanelSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="panel1a-content"
+              id="panel1a-header"
+            >
+              <Typography className={classes.heading}>Advanced Options</Typography>
+            </ExpansionPanelSummary>
+            <ExpansionPanelDetails>
+              <Typography>
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse malesuada lacus ex,
+                sit amet blandit leo lobortis eget.
+              </Typography>
+            </ExpansionPanelDetails>
+           </ExpansionPanel>
           </Grid>
 
           <Grid item xs={12}>

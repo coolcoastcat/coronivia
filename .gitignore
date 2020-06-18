@@ -12,6 +12,7 @@ package-lock.json
 /coverage
 client/test*
 test*
+scratch.js
 
 # production
 /build

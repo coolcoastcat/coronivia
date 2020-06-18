@@ -97,8 +97,19 @@ class Game extends React.Component{
       this.handleCancelGame = this.handleCancelGame.bind(this);
     }
   
+    onUnload = e => { // the method that will be used for both add and remove event
+      e.preventDefault();
+      e.returnValue = '';
+   }
+
+   componentDidMount() {
+      window.addEventListener("beforeunload", this.onUnload);
+   }
+
+
      /* Clean up once the game is unmounted */
      componentWillUnmount() {
+      window.removeEventListener("beforeunload", this.onUnload);
        console.log('Closing socket');
       this.socket.close();
      }

@@ -6,6 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require("socket.io/lib");
 const path = require('path');
+const getQuestions = require('trivia-questions');
 
 
 const gameRoomArray = {};
