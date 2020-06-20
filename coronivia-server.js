@@ -6,11 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require("socket.io/lib");
 const path = require('path');
-<<<<<<< Updated upstream
-
-=======
 const TriviaDB = require('./trivia-questions');
->>>>>>> Stashed changes
 
 const gameRoomArray = {};
 

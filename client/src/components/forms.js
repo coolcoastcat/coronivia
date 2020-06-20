@@ -13,8 +13,6 @@ import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import { green } from '@material-ui/core/colors';
-<<<<<<< Updated upstream
-=======
 import ExpansionPanel from '@material-ui/core/ExpansionPanel';
 import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
 import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
@@ -23,7 +21,6 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ListItemText from '@material-ui/core/ListItemText';
 import Checkbox from '@material-ui/core/Checkbox';
 import Input from '@material-ui/core/Input';
->>>>>>> Stashed changes
 import {
   withStyles,
   makeStyles,
@@ -59,8 +56,6 @@ const useStyles = makeStyles((theme) => ({
   },
   borderIt: {
     width: '50%'
-<<<<<<< Updated upstream
-=======
   },
   heading: {
     
@@ -68,7 +63,6 @@ const useStyles = makeStyles((theme) => ({
   panel: {
     maxWidth: 300,
     textAlign: 'center'
->>>>>>> Stashed changes
   }
 }));
 
@@ -259,8 +253,6 @@ export function CreateGameForm(props) {
 
     
 
-<<<<<<< Updated upstream
-=======
           <Grid  className={classes.panel} item xs={12}>
            <ExpansionPanel>
             <ExpansionPanelSummary
@@ -323,7 +315,6 @@ export function CreateGameForm(props) {
            </ExpansionPanel>
           </Grid>
            
->>>>>>> Stashed changes
           <Grid item xs={12}>
           <Box p={1}>
                 <Button onClick={() => {}}
