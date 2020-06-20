@@ -5,6 +5,7 @@ import _ from 'lodash';
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
 import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Select from '@material-ui/core/Select';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -12,6 +13,17 @@ import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import { green } from '@material-ui/core/colors';
+<<<<<<< Updated upstream
+=======
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ListItemText from '@material-ui/core/ListItemText';
+import Checkbox from '@material-ui/core/Checkbox';
+import Input from '@material-ui/core/Input';
+>>>>>>> Stashed changes
 import {
   withStyles,
   makeStyles,
@@ -47,8 +59,29 @@ const useStyles = makeStyles((theme) => ({
   },
   borderIt: {
     width: '50%'
+<<<<<<< Updated upstream
+=======
+  },
+  heading: {
+    
+  },
+  panel: {
+    maxWidth: 300,
+    textAlign: 'center'
+>>>>>>> Stashed changes
   }
 }));
+
+const GreenCheckbox = withStyles({
+  root: {
+    color: green[400],
+    '&$checked': {
+      color: green[600],
+    },
+  },
+  checked: {},
+})((props) => <Checkbox color="default" {...props} />);
+
 
 const ValidationTextField = withStyles({
   root: {
@@ -67,6 +100,33 @@ const ValidationTextField = withStyles({
   },
 })(TextField);
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+const categoryList = [
+                      { category_id: 9, category: 'General Knowledge' },
+                      { category_id: 10, category: 'Entertainment' },
+                      { category_id: 17, category: 'Science' },
+                      { category_id: 20, category: 'Art & Mythology' },
+                      { category_id: 21, category: 'Sports' },
+                      { category_id: 22, category: 'Geography' },
+                      { category_id: 23, category: 'History' },
+                      { category_id: 24, category: 'Politics' },
+                      { category_id: 31, category: 'Animation & Manga' },
+                      { category_id: 15, category: 'Video Games' }
+                      ];
+const selectedCategoryArray = ['General Knowledge','Entertainment','Science','Art & Mythology', 
+                          'Sports', 'Geography', 'History','Politics'];
+const selectedCategoryIDs = [9,10,17,20,21,22,23,24,25];
+
 export function CreateGameForm(props) {
     const classes = useStyles();
 
@@ -79,6 +139,31 @@ export function CreateGameForm(props) {
     const [owner, setOwner] = React.useState('');
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
+    const [categories, setCategories] = React.useState(selectedCategoryArray);
+    const [category_ids, setCategoryIDs] = React.useState(selectedCategoryIDs);
+    const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
+
+    const handlePauseChange = (event) => {
+      console.log("received event: %o",event.target.checked);
+      setPauseBetweenRounds(event.target.checked);
+    };
+
+    const handleCategoriesChange = (event) => {
+      const catArray = event.target.value;
+      console.log ('Received cats: '+catArray);
+      let catIDArray = [];
+      catArray.forEach(category=>{
+        categoryList.forEach((cat)=>{
+          if(cat.category === category){
+            catIDArray.push(cat.category_id);
+          }
+        });
+      });
+      console.log('About to set categories to: '+ catArray + ' and ids to: '+ catIDArray);
+  
+      setCategories(catArray);
+      setCategoryIDs(catIDArray);
+    };
   
 
     function handleRoundsChange(event) {
@@ -110,9 +195,10 @@ export function CreateGameForm(props) {
         questions: questions,
         rounds: rounds,
         difficulty: difficulty,
-        owner: owner
+        owner: owner,
+        categories: category_ids,
+        pauseBetweenRounds: pauseBetweenRounds
       };
-      
       props.handleFormSubmit(submission);  
       event.preventDefault();
     }
@@ -171,20 +257,73 @@ export function CreateGameForm(props) {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
-            <FormControl className={classes.formControl}>
-            <InputLabel id="difficulty-select-label">Question Difficulty</InputLabel>
-            <Select
-              labelId="difficulty-select-label"
-              id="difficulty-select"
-              value={difficulty}
-              onChange={handleDifficultyChange}
-            >
-              { DIFFICULTIES.map(difficulty => <MenuItem key={difficulty} value={difficulty}>{difficulty}</MenuItem>) }  
-            </Select>
-            </FormControl>
-          </Grid>
+    
 
+<<<<<<< Updated upstream
+=======
+          <Grid  className={classes.panel} item xs={12}>
+           <ExpansionPanel>
+            <ExpansionPanelSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="panel1a-content"
+              id="panel1a-header"
+            >
+              <Typography className={classes.heading}>Advanced Options</Typography>
+            </ExpansionPanelSummary>
+            <ExpansionPanelDetails>
+            <Grid container>
+
+              <Grid item xs={12}>
+                <FormControl className={classes.formControl}>
+                <InputLabel id="difficulty-select-label">Question Difficulty</InputLabel>
+                <Select
+                  labelId="difficulty-select-label"
+                  id="difficulty-select"
+                  value={difficulty}
+                  onChange={handleDifficultyChange}
+                >
+                  { DIFFICULTIES.map(difficulty => <MenuItem key={difficulty} value={difficulty}>{difficulty}</MenuItem>) }  
+                </Select>
+                </FormControl>
+              </Grid>
+            
+              <Grid item sm={6}>
+                  <FormControl className={classes.formControl}>
+                    <InputLabel id="demo-mutiple-checkbox-label">Categories</InputLabel>
+                    <Select
+                      labelId="categories-label"
+                      id="categories-mutiple-checkbox"
+                      multiple
+                      value={categories}
+                      onChange={handleCategoriesChange}
+                      input={<Input />}
+                      renderValue={(selected) => selected.join(', ')}
+                      MenuProps={MenuProps}
+                    >
+                      {categoryList.map((tmpCat) => (
+                        <MenuItem key={tmpCat.category_id} value={tmpCat.category}>
+                          <Checkbox checked={categories.indexOf(tmpCat.category) > -1} />
+                          <ListItemText primary={tmpCat.category} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+    
+              <Grid item sm={6}>
+                  <FormControlLabel
+              control={<GreenCheckbox checked={pauseBetweenRounds} onChange={handlePauseChange} name="pauseBetweenRounds" />}
+              label="Pause beteween rounds"
+              />
+               
+              </Grid>
+      
+            </Grid>
+            </ExpansionPanelDetails>
+           </ExpansionPanel>
+          </Grid>
+           
+>>>>>>> Stashed changes
           <Grid item xs={12}>
           <Box p={1}>
                 <Button onClick={() => {}}

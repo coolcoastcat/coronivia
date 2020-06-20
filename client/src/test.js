@@ -3,7 +3,7 @@ import React from 'react';
 import TimerSpinner from "./components/timer-spinner";
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
-
+import MultipleSelect from './test-multi-select-example'
 
 export class Test extends React.Component {
     constructor(props){
@@ -15,7 +15,7 @@ export class Test extends React.Component {
             showText: true
         }
         this.timer = null;
-        this.startTimer();
+  //      this.startTimer();
         
     
     }
@@ -48,10 +48,9 @@ export class Test extends React.Component {
 
     return (
             <Box style={{background: 'white'}}>    
-                <TimerSpinner value={this.state.progress} interval={this.state.interval} showTimerText={this.state.showText} />
+                <MultipleSelect />
                 <br/>
-                <Button onClick={this.handleButton} >{this.state.timerRunning ? 'Stop':'Start'} Timer</Button>
-                <Button onClick={this.toggleShowText} >{this.state.showText ? 'Hide':'Show'} Text</Button>
+    
             </Box> 
     );
     }

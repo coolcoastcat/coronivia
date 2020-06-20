@@ -88,7 +88,10 @@ if(!this.state.created){
 this.socket.emit('create-game',{rounds:createGameData.rounds,
                  questions:createGameData.questions,
                  difficulty:createGameData.difficulty, 
-                 owner:createGameData.owner}, (createGameResp)=>{ // Process the server response
+                 owner:createGameData.owner,
+                 categories: createGameData.categories,
+                 pauseBetweenRounds: createGameData.pauseBetweenRounds}
+                 , (createGameResp)=>{ // Process the server response
                    console.log("create-game API response: %o",createGameResp);
                    
                    this.gameConfig = createGameResp;
@@ -108,6 +111,18 @@ this.socket.emit('create-game',{rounds:createGameData.rounds,
 
 } else {
 console.log("Game "+this.gameConfig.roomname+" already created");
+// Re-join this game
+this.socket.emit('join',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
+  if(data.success){
+    this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
+    console.log("Socket opened by: "+this.gameConfig.player+" to re-join the game: "+this.gameConfig.roomname);
+  } else {
+    // Handle errors
+    this.handleJoinErrors(data.error);
+    // this.socket.close(); // I think we want to retry in the create game case
+  }
+}
+);
 }
 });
 }

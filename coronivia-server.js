@@ -6,7 +6,11 @@ const cors = require('cors');
 const http = require('http');
 const socketIo = require("socket.io/lib");
 const path = require('path');
+<<<<<<< Updated upstream
 
+=======
+const TriviaDB = require('./trivia-questions');
+>>>>>>> Stashed changes
 
 const gameRoomArray = {};
 
@@ -16,7 +20,7 @@ const port = process.env.PORT || 5000;
 const DEFAULT_NUM_QUESTIONS = 5; // For people hacking the API
 const DEFAULT_NUM_ROUNDS = 1; // For people hacking the API
 const MAX_NUM_QUESTIONS = 10;
-const MAX_ROUNDS = 50;
+const MAX_ROUNDS = 10;
 
 // timing intervals
 const GAME_START_COUNTDOWN = 3;
@@ -53,7 +57,7 @@ function handleNewSocketConnection(socket){
   */
   socket.on('create-game',(data,callback)=>{
     console.log('Handled create-game event with data %o',data);
-    let result = validateParams(["owner","rounds","questions","difficulty"],data);
+    let result = validateParams(["owner","rounds","questions","difficulty","categories"],data);
     if(!result.success){
       console.error(result.messages); 
       callback({ success: false, error: result.messages});
@@ -487,7 +491,7 @@ function shuffle(array) {
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
 
-  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds) {
+  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,categories) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
@@ -496,7 +500,7 @@ class GameRoom{
       this.difficulty = difficulty;
       this.roomName = this.createRoomName();
       this.gameRoundArray = [];
-      this.getQuestions(rounds,questionCount,difficulty);
+      this.getQuestions(rounds,questionCount,difficulty,categories);
       this.createdDate = Date.now();
       this.players = [];
       this.gameStatus = 'WAITING';
@@ -555,28 +559,27 @@ class GameRoom{
   return uuidv4();
 }
 
-  /* Calls the opentdb.com API for each round to retrieve questions and asynchronously sets the question sets as rounds into gameRoundQuestions array
-      @param: rounds required The number of rounds for which to receive quesitons. Defaults to 1 if not specified.
-      @param: questionsPerRound  required The number of questions to retrieve per round.  Defaults to 10 if not specified.
+  /* Calls the local data structure to retrieve questions and asynchronously sets the question sets as rounds into gameRoundQuestions array
+      @param rounds required The number of rounds for which to receive quesitons. Defaults to 1 if not specified.
+      @param questionsPerRound  required The number of questions to retrieve per round.  Defaults to 10 if not specified.
+      @param difficulty A string for the question difficulty (any | easy | medium | hard)
+      @param categories An array of category numbers to choose from
 
   */
-  getQuestions(rounds,questionsPerRound,difficulty){
+  getQuestions(rounds,questionsPerRound,difficulty, categories){
     var i;
     var params = '?amount='+ questionsPerRound;
-
-    if(difficulty !== 'any'){ params += '&difficulty='+difficulty;} // handle the any difficulty case
-
-
+    
+    const questions = TriviaDB.getTriviaQuestions(categories,(rounds * questionsPerRound), difficulty);
+    let start = 0;
+    let end = questionsPerRound;
     for(i=0; i < rounds;i++){
-      fetch(this.TRIVIA_URI + params).then(response => {
-          return response.json();
-      }).then(questionsJSON=>{
-        console.log('Retrieved ' + questionsJSON.results.length + ' questions for Round '+ i);
-        let round = new Round(Question.parseQuestions(questionsJSON));
+        start = i * questionsPerRound;
+        end = start + questionsPerRound;
+        let round = new Round(Question.parseQuestions(questions.slice(start,end)));
         this.gameRoundArray.push(round);
-      });
+    }
         
-    } // end for loop
   }
 
   /* Starts the round with the current this.currentRoundNumber. 
@@ -751,11 +754,12 @@ class Round {
    opentdb.com and parses it into a format that can be queried and sent to clients */
 class Question{
   constructor(questionJSON){
-    let pointValuesObj = {easy: 1, medium: 3, hard: 5};
+    let pointValuesObj = {easy: 10, medium: 30, hard: 50};
 
     this.correctAnswer = questionJSON.correct_answer;
     this.questionData ={
       category: questionJSON.category,
+      sub_category: questionJSON.sub_category,
       type: questionJSON.type,
       difficulty: questionJSON.difficulty,
       question: questionJSON.question,
@@ -817,7 +821,7 @@ class Player{
 */
 app.get('/api/create-game', (req, res) => {
   // console.log("my object: %o", req)
-  result = validateParams(["owner","rounds","questions","difficulty"],req.query);
+  result = validateParams(["owner","rounds","questions","difficulty","categories"],req.query);
   if(!result.success){
     console.error(result.messages)  
     res.status(400).send({ game_status: 'failed', errors: result.messages });
@@ -836,10 +840,12 @@ app.get('/api/create-game', (req, res) => {
   if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
   console.log('Number of rounds set to: ' + rounds);
 
+  var pauseBetweenRounds = (req.query.pauseBetweenRounds) ? req.query.pauseBetweenRounds : false; 
+
   var difficulty = (!req.query.difficulty || req.query.difficulty === 'any') ? null : req.query.difficulty;
 
   // create a new game room with the supplied parameters and add it to the list of games
-  game = new GameRoom(owner,rounds,questionsPerRound,difficulty);
+  game = new GameRoom(owner,rounds,questionsPerRound,difficulty,pauseBetweenRounds, categories);
 
   gameRoomArray[game.roomName] = game;
   console.log("Room Created: %o",game);
