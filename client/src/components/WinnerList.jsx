@@ -49,7 +49,7 @@ export default function WinnerList(props){
                     ]
                 );
         } else {
-            const pointText = (winners[0].score == 1)? 'point': 'points';
+            const pointText = (winners[0].score === 1)? 'point': 'points';
             winnerOutput = <Grid className={classes.tieTitle} item xs={12}>{winners[0].name} won the game with {winners[0].score} {pointText}!</Grid>
         }
         

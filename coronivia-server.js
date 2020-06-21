@@ -34,13 +34,13 @@ app.use(express.static(path.join(__dirname, "/public")));
 ///////////////  WEBSOCKET CONFIGURATION ///////////////
 const server = http.createServer(app);
 const io = socketIo(server); // setup the websocket
-// const socketConnections = {}; // TODO: Determine if there is a use for tracking all sockets
+const socketConnections = {}; // TODO: Determine if there is a use for tracking all sockets
 
 io.on('connection',handleNewSocketConnection);
 
 function handleNewSocketConnection(socket){
   console.log('a user connected with socket.id: '+socket.id);
-  // socketConnections[socket.id] = socket; // this would run the server out of memory, eventually, without cleanup
+  
 
   ///////// Socket Message Handlers /////////
 
@@ -60,33 +60,36 @@ function handleNewSocketConnection(socket){
       return;
     }
  
-     let owner = data.owner;
-     let difficulty = data.difficulty;
+    let owner = data.owner;
+    let difficulty = data.difficulty;
 
-     var questionsPerRound = data.questions;
-     if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS;}
-     console.log('Number of questions set to: ' + questionsPerRound);
-     
-     let rounds = data.rounds;
-     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-     console.log('Number of rounds set to: ' + rounds);
- 
-     let question = data.rounds;
-     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-     console.log('Number of rounds set to: ' + rounds);
+    var questionsPerRound = data.questions;
+    if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS;}
+    console.log('Number of questions set to: ' + questionsPerRound);
+    
+    let rounds = data.rounds;
+    if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
+    console.log('Number of rounds set to: ' + rounds);
 
-     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
+    let question = data.rounds;
+    if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
+    console.log('Number of rounds set to: ' + rounds);
 
-     let pauseBetweenRounds = data.pauseBetweenRounds ? data.pauseBetweenRounds : false;
+    let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
+
+    let pauseBetweenRounds = data.pauseBetweenRounds ? data.pauseBetweenRounds : false;
+
+      // If the categories array is empty, set the category to General by default
+    let categories = (data.categories.length === 0) ? [9] : data.categories;
 
      // create a new game room with the supplied parameters and add it to the list of games
-    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,categories);
  
      gameRoomArray[game.roomName] = game;
      console.log("Room Created: %o",game);
      callback({ success: true, 
                 gameStatus: 'WAITING',
-                rounds: rounds, 
+                rounds: game.rounds, 
                 questions: questionsPerRound, 
                 roomname: game.roomName,
                 difficulty: game.difficulty, 
@@ -114,7 +117,11 @@ function handleNewSocketConnection(socket){
       callback({ success: false, error: 'No such roomname found: '+data.roomname});
       return;
     }
+  
+    // Add user to a room and track that room globally. On disconnect the room will be updated and the user removed from tracking.
     socket.join(data.roomname);
+    socketConnections[socket.id] = data.roomname; // this would run the server out of memory, eventually, without cleanup
+  
     let addPlayerResult = addPlayer(data.player,data.roomname,socket);
     if(addPlayerResult.success){
       let game = gameRoomArray[data.roomname];
@@ -289,14 +296,22 @@ function handleNewSocketConnection(socket){
   );
 
   socket.on('disconnect',() => {
+    
     console.log('a user with socket.id: '+socket.id +' disconnected');
+    const roomname =  socketConnections[socket.id];
+    
+    console.log('Sending players list update to room: '+roomname);
+    const game = gameRoomArray[roomname];
+    io.to(roomname).emit('player-change',game.getPlayerInfo());
+    delete socketConnections[socket.id]; // Remove user from the users in rooms
   });
 
 }
 
 
 /* Start the server */
-server.listen(port, () => console.log(`Listening on port ${port}`));
+const startTime = (new Date()).toTimeString();
+server.listen(port, () => console.log(`Listening on port ${port} at ${startTime}`));
 
 
 
@@ -326,27 +341,7 @@ function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback
   },1000);
 }
 
-/* Creates a timer for a particular room to show a message
-  @param roomname The room to send the timer
-  @param secs How many seconds to display a message
-  @param event type of event to emit
-  @param message Message to show
-  @param gameRoom The GameRoom object, needed so that the game context can be provided to the callback
-  @param callback Function to call once the timer has elapsed
-*/
-function createTimerNoCountdown(roomName,secs,event,message,gameRoom,callback){
-  console.log('DEBUG: createTimerNoCountdown() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name);
 
-  io.to(roomName).emit(event,{count: secs,timerMessage: message, showCountdown: false});
-  let timer = setInterval(()=>{
-    secs--;
-    if(secs === 0){
-      clearInterval(timer);
-      io.to(roomName).emit('clear-countdown',{});
-      callback(gameRoom);
-    }
-  },1000);
-}
 
 /* If valid room and Player doesn't already exist, adds a player to the room.
    If Player does exist but no valid socket connection exists, reconnect to this Player
@@ -491,7 +486,6 @@ class GameRoom{
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
-      this.rounds = rounds;
       this.questionCount = questionCount;
       this.difficulty = difficulty;
       this.roomName = this.createRoomName();
@@ -503,6 +497,9 @@ class GameRoom{
       this.currentRoundNumber = 0;
       this.questionCountdown = questionCountdown;
       this.pauseBetweenRounds = pauseBetweenRounds;
+
+      // This handles the case where we may have fewer questions per round than the user asked for
+      this.rounds = this.gameRoundArray.length;
   }
 
   /* Retrieves a player by name 
@@ -563,17 +560,39 @@ class GameRoom{
 
   */
   getQuestions(rounds,questionsPerRound,difficulty, categories){
-    var i;
-    var params = '?amount='+ questionsPerRound;
-    
-    const questions = TriviaDB.getTriviaQuestions(categories,(rounds * questionsPerRound), difficulty);
+
+    let totalQuestions = rounds * questionsPerRound;
+    const questions = TriviaDB.getTriviaQuestions(categories,(totalQuestions), difficulty);
+    console.debug("DEBUG getQuestions() -> received "+questions.length+" questions");
+
+    // Create questionObjects out of the questions
+    const questionObjArray = [];
+    questions.forEach((rawQuestion)=>{
+      questionObjArray.push(new Question(rawQuestion));
+    });
+
+    // slice up the questionObjArray into Rounds
     let start = 0;
     let end = questionsPerRound;
+    let i;
     for(i=0; i < rounds;i++){
         start = i * questionsPerRound;
         end = start + questionsPerRound;
-        let round = new Round(Question.parseQuestions(questions.slice(start,end)));
+
+        // Check case if we ran out of questions
+        if(start >= questions.length){ 
+          console.log("Ran out of questions for user selected criteria: \n"+
+                      "  categories: "+categories+"\n"+
+                      "  difficulty: "+difficulty+"\n"+
+                      "  rounds: "+rounds+"\n"+
+                      "  questionsPerRound: "+questionsPerRound+"\n"+
+                      "User asked for: "+totalQuestions+" but we only had "+questions.length
+                    );
+          return;
+        }
+        let round = new Round(questionObjArray.slice(start,end));
         this.gameRoundArray.push(round);
+
     }
         
   }
@@ -588,7 +607,7 @@ class GameRoom{
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
       let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
       console.log("Starting " + roundTitle);
-      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,false,gameRoom,gameRoom.playRound);
+      createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,true,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
       gameRoom.endGame();
     }
@@ -764,26 +783,8 @@ class Question{
     };
     this.questionData.answers.push(this.correctAnswer);
     this.questionData.answers = shuffle(this.questionData.answers);
+    // console.debug("DEBUG: Successfully created question with questionData: %o",this.questionData);
 
-  }
-
-
-  /* Static helper method to parse an opendbt.com question result and return an array of Question objects */
-  static parseQuestions(questionsJSON){
-    let result = {success: true, message:'parsed questions'};
-    
-    if(questionsJSON.response_code !== 0){ // handle error from opendbt.com
-        result.success = false;
-        result.message = 'Error response code from opendbt.com: '+questionsJSON.response_code;
-        return result;  
-    }
-    // Populate an array of Question objects
-    let questionResultArray = [];
-    questionsJSON.results.forEach((question)=>{
-      questionResultArray.push(new Question(question));
-    } );
-    console.log('Successfully parsed '+questionResultArray.length + ' questions');
-    return questionResultArray;
   }
 
 }
@@ -836,9 +837,13 @@ app.get('/api/create-game', (req, res) => {
   if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
   console.log('Number of rounds set to: ' + rounds);
 
+
   var pauseBetweenRounds = (req.query.pauseBetweenRounds) ? req.query.pauseBetweenRounds : false; 
 
-  var difficulty = (!req.query.difficulty || req.query.difficulty === 'any') ? null : req.query.difficulty;
+  var difficulty = req.query.difficulty;
+
+  // If the categories array is empty, set the category to General by default
+  var categories = (categories.length === 0)? [9]:req.query.categories;
 
   // create a new game room with the supplied parameters and add it to the list of games
   game = new GameRoom(owner,rounds,questionsPerRound,difficulty,pauseBetweenRounds, categories);
@@ -983,6 +988,12 @@ roomIDs.forEach(id => {
 app.get('/api/dump-all-games', (req, res) => {
   console.log("/api/dump-all-games called");
   res.send({ gameRoomArray });
+})
+
+// DEBUG - REMOVE BEFORE PROD
+app.get('/api/get-all-users', (req, res) => {
+  console.log("/api/get-all-users called");
+  res.send({ socketConnections });
 })
 
 // DEBUG - REMOVE BEFORE PROD

@@ -76,6 +76,11 @@ function shuffle(array) {
     If there aren't enough questions available with the selected option, just return as many as there are. Calling code
     should check for array length.
 
+    NOTE: It's possible to request more questions than are available for a category and difficulty setting. When the
+    questions run out, this method will return will all the questions it could find. Example: Request 10 rounds of 10 sports
+    questions with difficulty hard. There are only 14 questions so the request will be 86 shy!
+    IT IS UP TO THE REQUESTING METHOD TO HANDLE THAT FEWER QESTSTIONS WERE RETURNED. 
+
     @param categoryArray The array of categories from which to return a random selection of questions
     @param questionCount The number of questions to retrieve
     @param difficulty The difficulty of question to return
@@ -83,7 +88,7 @@ function shuffle(array) {
     @return an array of questions 
 */
 exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
-    console.log("Requested "+questionCount+" questions of "+difficulty+" for categories: "+categoryArray);
+    console.log("Requested "+questionCount+" questions of "+difficulty+" difficulty for categories: "+categoryArray);
     let questions = [];
     categoryArray = shuffle(categoryArray); // shuffle to avoid prioritizing early categories
 
@@ -94,6 +99,11 @@ exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
 
     // iterate over each category and get some randomized questions
     categoryArray.forEach((category)=>{
+        // test if category exists
+        if(!allQuestions.categories[category]){
+            consol.error("ERROR -> bad category received: "+category);
+            return;
+        }
         let questionsToRetrieve = questionsPerCategory;
         // on the first pass, boost the number of questions to retrieve with the remainder from above
         if(count++ === 0){
@@ -104,7 +114,9 @@ exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
         allQuestions.categories[category][difficulty] = shuffle(allQuestions.categories[category][difficulty]);
         let i = 0;
         for(i;i<questionsToRetrieve;i++){
-            questions.push(allQuestions.categories[category][difficulty][i]);
+            let question = allQuestions.categories[category][difficulty][i];
+            if(!question){ return;}
+            questions.push(question);
         }
 
     });
@@ -112,5 +124,25 @@ exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
     return questions;
 }
 
+exports.getCategoryStats = function (){
+    let results = null;
+    const categories = allQuestions.categories;
+    for(const category in categories){
+        const catNumQs = categories[category]['any'].length;
+        const easyNumQs =categories[category]['easy'].length;
+        const medNumQs = categories[category]['medium'].length;
+        const hardNumQs = categories[category]['hard'].length;
+        const tmp = "category_"+category+ " [any].length: "+catNumQs
+                +" [easy].length: "+easyNumQs + " ("+ ( (easyNumQs / catNumQs).toFixed(2) * 100 ) + "%)"
+                +" [medium].length: "+medNumQs + " ("+ ( (medNumQs / catNumQs).toFixed(2) * 100 ) + "%)"
+                +" [hard].length: "+hardNumQs + " ("+ ( (hardNumQs / catNumQs).toFixed(2) * 100 ) + "%)";
+        console.log(tmp);
+        results += tmp;
+    }
+    
+    return results;
+
+}
+debugger;
 // let questions = getQuestions([9,10,17],4,'any');
 // console.log('questions: \n %o',questions);

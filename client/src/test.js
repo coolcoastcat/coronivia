@@ -1,8 +1,8 @@
 // used as a mock to test components
 import React from 'react';
-import TimerSpinner from "./components/timer-spinner";
+// import TimerSpinner from "./components/timer-spinner";
 import Box from '@material-ui/core/Box';
-import Button from '@material-ui/core/Button';
+// import Button from '@material-ui/core/Button';
 import MultipleSelect from './test-multi-select-example'
 
 export class Test extends React.Component {

@@ -72,12 +72,12 @@ class Question extends React.Component {
             question: string,
             answers:[array] 
         */
-        console.log("props: %o",props);
+        console.debug("props: %o",props);
 
         this.player = props.thisPlayer;
         this.gameRoomName = props.gameRoomName;
 
-        console.log("questionData: %o",this.questionData);
+        console.debug("questionData: %o",this.questionData);
         this.state = {
             playerAnswer: null,
             submittedAnswer: false,
@@ -117,7 +117,7 @@ class Question extends React.Component {
                         totalQuestions: questionJSON.totalQuestions,
                         showQuestion: true
                     });
-        console.log("Set question to: %o",questionJSON.question);
+        console.debug("Set question to: %o",questionJSON.question);
     }
 
     /* Sets up the event handlers for playing the game */
@@ -134,7 +134,7 @@ class Question extends React.Component {
     
     handleSubmitAnswer(event){
         let sendData = {player: this.player, gameRoomName: this.gameRoomName, playerAnswer:this.state.playerAnswer};
-        console.log("Sending answer to server: %o",sendData);
+        console.debug("Sending answer to server: %o",sendData);
         this.socket.emit('player-answer',
                           sendData,
                             (data)=>{
@@ -143,10 +143,10 @@ class Question extends React.Component {
                                     let isCorrect = (data.points > 0)? true :false;
                                     this.setState({answerisCorrect:isCorrect});
                                     
-                                    console.log('Answer successfully received and earned points: '+data.points);
+                                    console.debug('Answer successfully received and earned points: '+data.points);
                                 } else {
                                     this.setState({submittedAnswer: true, playerAnswer: data.error});
-                                    console.log('Error from server: '+data.error)
+                                    console.error('Error from server: '+data.error)
                                 }
                             });
         

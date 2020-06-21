@@ -45,11 +45,11 @@ setUpEventHandlers(){
 
 this.socket.on('game-joined',(data)=>{
 this.setState({created: true});
-console.log("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
+console.debug("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
 });
 
 this.socket.on('player-change',(data) =>{
-console.log('CreateGame event: player-change with data: %o',data);
+console.debug('CreateGame event: player-change with data: %o',data);
 this.playerListElement.current.updatePlayers(data); // Update the child Game
 });
 
@@ -78,7 +78,7 @@ handleFormSubmit(createGameData){
 this.socket = io(SERVER_URI);
 this.setUpEventHandlers();
 this.socket.on('connect',() =>{
-console.log('client socket connected with id: '+this.socket.id);
+console.debug('client socket connected with id: '+this.socket.id);
 
 // Handle case if Owner's client got disconnected 
 // TODO: consider checking with server if game exists. It's possible the game server got restarted
@@ -92,14 +92,15 @@ this.socket.emit('create-game',{rounds:createGameData.rounds,
                  categories: createGameData.categories,
                  pauseBetweenRounds: createGameData.pauseBetweenRounds}
                  , (createGameResp)=>{ // Process the server response
-                   console.log("create-game API response: %o",createGameResp);
+                   console.debug("create-game API response: %o",createGameResp);
                    
                    this.gameConfig = createGameResp;
+                   console.debug("received game config: %o",this.gameConfig);
                    // Now join this game
                    this.socket.emit('join',{roomname: createGameResp.roomname, player: createGameResp.player},(data)=>{
                      if(data.success){
                        this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
-                       console.log("Socket opened by: "+createGameResp.player+" to join the game: "+createGameResp.roomname);
+                       console.debug("Socket opened by: "+createGameResp.player+" to join the game: "+createGameResp.roomname);
                      } else {
                        // Handle errors
                        this.handleJoinErrors(data.error);
@@ -110,12 +111,12 @@ this.socket.emit('create-game',{rounds:createGameData.rounds,
 });
 
 } else {
-console.log("Game "+this.gameConfig.roomname+" already created");
+console.debug("Game "+this.gameConfig.roomname+" already created");
 // Re-join this game
 this.socket.emit('join',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
   if(data.success){
     this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
-    console.log("Socket opened by: "+this.gameConfig.player+" to re-join the game: "+this.gameConfig.roomname);
+    console.debug("Socket opened by: "+this.gameConfig.player+" to re-join the game: "+this.gameConfig.roomname);
   } else {
     // Handle errors
     this.handleJoinErrors(data.error);

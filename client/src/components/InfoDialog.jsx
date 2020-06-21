@@ -23,7 +23,7 @@ export default function InfoDialog(props) {
 
   
  
-    console.log("invoked and open: "+open+" props.open: "+props.open);
+    console.debug("invoked and open: "+open+" props.open: "+props.open);
     return (
     <Box>
       <Dialog fullWidth={true} open={open} onClose={handleClose} >

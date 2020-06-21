@@ -75,7 +75,7 @@ function getErrorPhrase(){
 class Game extends React.Component{
     constructor(props){
       super(props);
-      console.log("Game constructor received props: o%",props);
+      console.debug("Game constructor received props: o%",props);
       this.gameConfig = props.gameConfig;
       this.state = {
         gameStatus: props.gameConfig.gameStatus,
@@ -105,61 +105,62 @@ class Game extends React.Component{
           @param playerArray The updated player array to show.
       */
      updatePlayers(playerArray){
-      console.log("Game received player array update: %o",playerArray);
+      console.debug("Game received player array update: %o",playerArray);
   
       this.setState({players: playerArray});
-      console.log("updating PlayerList with %o",this.state.players);
+      console.debug("updating PlayerList with %o",this.state.players);
       if(this.playerListElement.current){
         this.playerListElement.current.updatePlayers(this.state.players); // Update the child
       }
     }
   
      setUpEventHandlers(){
-      console.log("Setting up socket.io event hanlders for socket: "+this.socket.id);
+      console.debug("Setting up socket.io event hanlders for socket: "+this.socket.id);
      
   
       this.socket.on('game-start',(data) =>{
-        console.log('event: game-start with data: %o',data);
+        console.debug('event: game-start with data: %o',data);
+        this.gameConfig.gameStatus = data.gameStatus;
         this.setState({ gameStatus: data.gameStatus }); // Kick things off!
       });
     
       this.socket.on('player-change',(playerArray) =>{
-        console.log('Game event: player-change with data: %o',playerArray);
+        console.debug('Game event: player-change with data: %o',playerArray);
         this.setState({players: playerArray});
         if(this.playerListElement.current){
           this.playerListElement.current.updatePlayers(this.state.players); // Update the child
         }
-        console.log('new Game status: %o',this.state);
+        console.debug('new Game status: %o',this.state);
       });
     
     
       this.socket.on('round-start',(data) =>{
-        console.log('event: round-start with data: %o',data);
+        console.debug('event: round-start with data: %o',data);
       });
     
       this.socket.on('question',(data) =>{
-        console.log('event: question with data: %o',data);
+        console.debug('event: question with data: %o',data);
       });
     
       this.socket.on('answer',(data) =>{
-        console.log('event: answer with data: %o',data);
+        console.debug('event: answer with data: %o',data);
       });
     
   
   
       this.socket.on('game-cancelled',(data) =>{
-        console.log('event: game-cancelled with data: %o',data);
+        console.debug('event: game-cancelled with data: %o',data);
         this.handleEndGame();
   
       });
     
       this.socket.on('timer-update',(data) =>{
-        console.log('event: timer-update with data: %o',data);
+        console.debug('event: timer-update with data: %o',data);
       });
     
     
       this.socket.on('disconnect',(reason) => {
-        console.log('event: disconnect from server for reason: '+reason);
+        console.debug('event: disconnect from server for reason: '+reason);
         if(reason === 'transport closed') {
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
@@ -170,18 +171,18 @@ class Game extends React.Component{
       });
     
       this.socket.on('connect_failed',() => {
-        console.log('event: connection to server failed');
+        console.debug('event: connection to server failed');
       })
     
       this.socket.on('reconnect',(attemptNumber) => {
-        console.log('event: reconnected with server after '+attemptNumber+' tries');
+        console.debug('event: reconnected with server after '+attemptNumber+' tries');
       });
     }
   
   
     /* Handles the button click to start the game! */
     handleStartGame(){
-    console.log("DEBUG handleStartGame() called with object this: %o",this);
+    console.debug("DEBUG handleStartGame() called with object this: %o",this);
      this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
               (data)=>{
                 if(data.success){
@@ -193,7 +194,7 @@ class Game extends React.Component{
   
     /*Called when game is cancelled or naturally ends*/
     handleEndGame(){
-      console.log("handleEndGame() called");
+      console.debug("handleEndGame() called");
       confirmAlert({
         customUI: ({ onClose }) => {
           this.socket.close();
@@ -220,7 +221,7 @@ class Game extends React.Component{
     }
   
     handleError(errorMsg){
-      console.log("handleError(): "+errorMsg);
+      console.error("handleError(): "+errorMsg);
       confirmAlert({
         title: getErrorPhrase(),
         message: errorMsg,
@@ -237,9 +238,9 @@ class Game extends React.Component{
     handleCancelGame = ()=>{
         this.setState({confirmCancel: false}); // Hide the cancel dialog
 
-        console.log("cancelling the game");
+        console.debug("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
-        console.log('Cancel game result: %o',data);
+        console.debug('Cancel game result: %o',data);
         if(!data.success){ this.handleError(data.error); }
         // Server should kick everyone out and display final score
         });
@@ -249,7 +250,7 @@ class Game extends React.Component{
     handleLeaveGame = ()=>{
    
         this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
-        console.log('Player '+this.gameConfig.player+' leaving game result: %o',data);
+        console.debug('Player '+this.gameConfig.player+' leaving game result: %o',data);
         this.setState({leaveGame:true, confirmLeave: false});
         this.socket.close();
         });
@@ -260,7 +261,7 @@ class Game extends React.Component{
       var copyText = document.getElementById("gameroom");
       copyText.select();
       document.execCommand("copy");
-      console.log("copied link to clipboard");
+      console.debug("copied link to clipboard");
       this.setState({copied: true});
       return false;
     }
@@ -272,7 +273,6 @@ class Game extends React.Component{
   
     render() {
       const { classes } = this.props;
-      console.log("classes object: %o",classes);
 
       if(this.state.leaveGame){
         return <Redirect to='/' />
@@ -413,13 +413,13 @@ export default withStyles(styles)(Game);
     setUpEventHandlers(){
   
       this.socket.on('player-change',(data) =>{
-        console.log('JoinGame event: player-change with data: %o',data);
+        console.debug('JoinGame event: player-change with data: %o',data);
         this.playerListElement.current.updatePlayers(data); // Update the child Game
       });
   
       /* Handle generic server error ¯\_(ツ)_/¯ */
       this.socket.on('error',(data) => {
-        console.log('event: error with data: %o',data);
+        console.error('event: error with data: %o',data);
         confirmAlert({
           title: getErrorPhrase(),
           message: data.error,
@@ -455,13 +455,13 @@ export default withStyles(styles)(Game);
       this.socket = io(SERVER_URI);
       this.setUpEventHandlers();
       this.socket.on('connect',() =>{
-        console.log('client socket connected with id: '+this.socket.id);
+        console.debug('client socket connected with id: '+this.socket.id);
         this.setState({serverConnection: 'connected', isLoading: false});
         this.socket.emit('join',{roomname: joinGameData.roomname, player: joinGameData.player},(data)=>{
           if(data.success){
             this.gameConfig = data;
             this.setState({joined: true}); // Causes a referesh and Game will get created
-            console.log("Socket opened by: "+joinGameData.player+" to join the game: "+joinGameData.roomname);
+            console.debug("Socket opened by: "+joinGameData.player+" to join the game: "+joinGameData.roomname);
           } else {
             // Handle errors
             this.handleJoinErrors(data.error);

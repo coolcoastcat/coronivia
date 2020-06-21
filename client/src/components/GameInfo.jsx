@@ -1,5 +1,4 @@
 import React from "react";
-import "./game-info.css";
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import { green } from '@material-ui/core/colors';
@@ -10,7 +9,7 @@ const content = {border: '1px solid lightGray', justify:"flex-start" ,fontSize:'
 export class GameInfo extends React.Component{
     constructor(props){
         super(props)
-        console.log("GameInfo constructed with props: %o",props);
+        console.debug("GameInfo constructed with props: %o",props);
         this.gameConfig = props.gameConfig;
         this.MAX_NAME_LENGTH = 10;
     }

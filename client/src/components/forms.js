@@ -119,13 +119,13 @@ const categoryList = [
                       ];
 const selectedCategoryArray = ['General Knowledge','Entertainment','Science','Art & Mythology', 
                           'Sports', 'Geography', 'History','Politics'];
-const selectedCategoryIDs = [9,10,17,20,21,22,23,24,25];
+const selectedCategoryIDs = [9,10,17,20,21,22,23,24];
 
 export function CreateGameForm(props) {
     const classes = useStyles();
 
     const MAX_ROUNDS = 10;
-    const MAX_QUESTIONS_PER_ROUND = 50;
+    const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
     const [rounds, setRounds] = React.useState(1);
     const [difficulty, setDifficulty] = React.useState('any');
@@ -138,13 +138,13 @@ export function CreateGameForm(props) {
     const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
 
     const handlePauseChange = (event) => {
-      console.log("received event: %o",event.target.checked);
+      console.debug("received event: %o",event.target.checked);
       setPauseBetweenRounds(event.target.checked);
     };
 
     const handleCategoriesChange = (event) => {
       const catArray = event.target.value;
-      console.log ('Received cats: '+catArray);
+      console.debug ('Received cats: '+catArray);
       let catIDArray = [];
       catArray.forEach(category=>{
         categoryList.forEach((cat)=>{
@@ -153,7 +153,6 @@ export function CreateGameForm(props) {
           }
         });
       });
-      console.log('About to set categories to: '+ catArray + ' and ids to: '+ catIDArray);
   
       setCategories(catArray);
       setCategoryIDs(catIDArray);
@@ -162,17 +161,17 @@ export function CreateGameForm(props) {
 
     function handleRoundsChange(event) {
       setRounds(event.target.value);
-      console.log('set rounds to: '+event.target.value);
+      console.debug('set rounds to: '+event.target.value);
     }
     
     function handleQuestionsChange(event) {
       setQuestions(event.target.value);
-      console.log('set questions to: '+event.target.value);
+      console.debug('set questions to: '+event.target.value);
     }
   
     function handleDifficultyChange(event) {
       setDifficulty(event.target.value);
-      console.log('set difficulty to: '+event.target.value);
+      console.debug('set difficulty to: '+event.target.value);
     }
   
     function handleOwnerChange(event) {
@@ -280,7 +279,7 @@ export function CreateGameForm(props) {
               </Grid>
             
               <Grid item sm={6}>
-                  <FormControl className={classes.formControl}>
+                  <FormControl required className={classes.formControl}>
                     <InputLabel id="demo-mutiple-checkbox-label">Categories</InputLabel>
                     <Select
                       labelId="categories-label"
@@ -365,7 +364,7 @@ export function CreateGameForm(props) {
     }
   
     function handleSubmit(event) {
-      if(roomname.length == 4){
+      if(roomname.length === 4){
       console.log('A Player: '+player+ 'is joining roomname: ' + roomname);
         var submission = {
           roomname: roomname,

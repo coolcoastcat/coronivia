@@ -84,6 +84,11 @@ class Landing extends React.Component {
     this.state = {
       showInfoDialog: false
     }
+    console.log("Welcome to Coronivia!");
+    console.log("This is an open source project and by looking in the console output, you're probably after some details!");
+    console.log("Please visit the project page for details on this open source project:");
+    console.log("https://github.com/coolcoastcat/coronivia");
+    console.log("Set your console log level to Verbose (Chrome) or Debug (Firefox) to see all of the debug output.")
   }
 
   /* Handles the click of the info icon */
@@ -103,13 +108,13 @@ class Landing extends React.Component {
           <h1 >Welcome to Coronivia! <InfoTwoToneIcon onClick={this.handleInfoClick} style={{ color: green[500] }} /> {devMsg}</h1>
         </Box>
          <Link to="/create">
-           <Button onClick={() => {console.log("Clicked on Create Game")}}
+           <Button onClick={() => {console.debug("Clicked on Create Game")}}
            type="button" 
            buttonSize="btn--medium"
            buttonStyle='btn--success--outline'>Create Game</Button>
         </Link>
         <Link to="/join">
-          <Button onClick={() => {console.log("Clicked on Join Game")}}
+          <Button onClick={() => {console.debug("Clicked on Join Game")}}
            type="submit" 
            buttonSize="btn--medium"
            buttonStyle='btn--success--solid'>Join Game</Button>

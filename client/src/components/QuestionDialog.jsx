@@ -11,13 +11,15 @@ import TimerSpinner from "./timer-spinner";
 
 
 export default function QuestionDialog(props) {
-  console.log("DEBUG - QuestionDialog props: %o",props);
+  console.debug("DEBUG - QuestionDialog props: %o",props);
   const [open, setOpen] = React.useState(true);
   const [leaveGame,setLeaveGame] = React.useState(props.leaveGame);
 
   const handleClose = () => {
     setOpen(false);    
   };
+
+  React.useEffect(()=>console.debug("Updated QuestionDialog with props: %o",props));
 
   let leaveContent = null; 
       if(leaveGame) { 

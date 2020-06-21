@@ -37,7 +37,7 @@ const styles = theme => ({
 class PlayerListScores extends React.Component{
     constructor(props){
         super(props)
-        console.log("PlayerList constructed with props: %o",props);
+        console.debug("PlayerList constructed with props: %o",props);
         this.player = props.thisPlayer;
         this.state = {
             players: (props.players) ? props.players : null,
@@ -63,19 +63,19 @@ class PlayerListScores extends React.Component{
     */
     updatePlayers(playerArray){
         this.setState({players: playerArray});
-        console.log("PlayersList received players update %o",playerArray);
+        console.debug("PlayersList received players update %o",playerArray);
     }
 
     /* alternating row styling */
     getClass(index){
         const { classes } = this.props;
-        return (index %2 == 0 )  ? classes.content : classes.contentGray;
+        return (index %2 === 0 )  ? classes.content : classes.contentGray;
     }
 
     render(){
         let playerItems = '';
         const { classes } = this.props;
-        console.log("DEBUG: Players array: %o",this.state.players)
+        console.debug("DEBUG: Players array: %o",this.state.players)
         if(this.state.players){
             playerItems = this.state.players.map((player,index) => {
                 let connectedStyle = (!player.connected)? classes.disconnected : classes.none;
