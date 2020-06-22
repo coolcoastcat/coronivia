@@ -237,7 +237,9 @@ function handleNewSocketConnection(socket){
       return;
     }
     gameRoom = gameRoomArray[data.roomname];
+    gameRoom.gameStatus = 'PLAYING';
     console.log('Starting game for room: '+data.roomname);
+    
     
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
     console.log('Issued game-start event to Game Room: '+gameRoom.roomName);

@@ -54,7 +54,9 @@ export default function QuestionDialog(props) {
             {props.timerText} <TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} />
           </DialogContentText>
         }
-          {props.children}
+          <Box style={{ fontFamily: 'sans-serif'}}>
+          {(props.children) ? props.children : "Thanks for joining in! Your screen will refresh on the next question."}
+          </Box>
         </DialogContent>
         <DialogActions>
           {leaveContent}

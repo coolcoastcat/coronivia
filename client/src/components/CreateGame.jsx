@@ -1,6 +1,7 @@
 import React from 'react';
 import Game from './Game';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+import AlertDialog from './AlertDialog';
 import io from "socket.io-client/lib";
 import { CreateGameForm } from "./forms";
 import config  from "./config";
@@ -39,7 +40,9 @@ export class CreateGame extends React.Component{
 
     this.state = { 
       created: false,
-      joined: false
+      joined: false,
+      joinError: false,
+      joinErrorMsg: null
     }
     this.gameConfig = {}; // The parsed config to send to Game
     this.createdGameResponseJSON = {}; // Raw JSON response from the Server create-game API
@@ -71,16 +74,7 @@ console.log('event: error with data: %o',data);
 }
 
 handleJoinErrors(errorMsg){
-  confirmAlert({
-      title: getErrorPhrase(),
-      message: errorMsg,
-      buttons: [
-        {
-          label: 'Ok',
-          onClick: () => {}
-        }
-      ]
-  });
+  this.setState({joinError: true, joinErrorMsg: errorMsg});
 }
 // TODO - DECIDE IF THERE SHOULD BE AN owner-join EVENT OR IF THE CONFIG I RECEIVE FROM THE JOIN EVENT IS SUFFICIENT TO REINSTANTIATE THE GAME 
 // ALONG WITH THE OWNER ID (WHICH I THINK IT SHOULD )
@@ -160,6 +154,17 @@ handleFormSubmit(createGameData){
 
 
 render() {
+  if(this.state.joinError){
+    return (
+      <AlertDialog buttonContinueText={'Ok'} 
+      dialogText={this.state.joinErrorMsg} 
+      dialogTitle={getErrorPhrase()}
+      callback={()=>this.setState({joinError:false})} >
+        </AlertDialog>
+    );
+  }
+
+
 if(!this.state.created){
 return(
 <CreateGameForm handleFormSubmit={this.handleFormSubmit} />
