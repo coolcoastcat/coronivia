@@ -170,7 +170,7 @@ class Question extends React.Component {
 
                         <Grid item xs={12}>
                             <Grid  className={answerStyle} container>
-                                <Grid className={classes.question} item >{(qObj && qObj.question)? renderHTML(qObj.question) : 'Loading question...'}</Grid>
+                                <Grid xs={12} className={classes.question} item >{(qObj && qObj.question)? renderHTML(qObj.question) : 'Loading question...'}</Grid>
                                 <Grid className={classes.label}  item xs={4}>
                                 <Box p={1} >
                                     Sent:
