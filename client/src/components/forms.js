@@ -338,7 +338,7 @@ export function CreateGameForm(props) {
 
   export function JoinGameForm(props){
     const classes = useStyles();
-    const [player, setPlayer] = React.useState('');
+    const [player, setPlayer] = React.useState((props.player) ? props.player : '');
     const [playerNameHelper, setPlayerHelper] = React.useState('');
     const [joinRoomHelper, setJoinRoomHelper] = React.useState('');
     const [roomname,setRoomname] = React.useState((props.roomname) ? props.roomname : '');

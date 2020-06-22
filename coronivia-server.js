@@ -302,7 +302,9 @@ function handleNewSocketConnection(socket){
     
     console.log('Sending players list update to room: '+roomname);
     const game = gameRoomArray[roomname];
-    io.to(roomname).emit('player-change',game.getPlayerInfo());
+    if(game){ // make sure it still exists as a cancel game may have removed it
+       io.to(roomname).emit('player-change',game.getPlayerInfo());
+    }
     delete socketConnections[socket.id]; // Remove user from the users in rooms
   });
 

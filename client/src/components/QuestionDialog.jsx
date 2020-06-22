@@ -13,7 +13,7 @@ import TimerSpinner from "./timer-spinner";
 export default function QuestionDialog(props) {
   console.debug("DEBUG - QuestionDialog props: %o",props);
   const [open, setOpen] = React.useState(true);
-  const [leaveGame,setLeaveGame] = React.useState(props.leaveGame);
+  const [leaveGame,setLeaveGame] = React.useState(false);
 
   const handleClose = () => {
     setOpen(false);    
@@ -21,15 +21,26 @@ export default function QuestionDialog(props) {
 
   React.useEffect(()=>console.debug("Updated QuestionDialog with props: %o",props));
 
-  let leaveContent = null; 
-      if(leaveGame) { 
-        leaveContent = <Box>
-                                <Button onClick={props.leaveCallback}>Leave</Button>
-                                <Button onClick={props.stayCallback}>Stay</Button>
-                              </Box>;
-      } 
+
+  function localHandleLeave(){
+    setLeaveGame(true);
+  }
+
+  function cancelLeave(){
+    setLeaveGame(false);
+  }
+
+
+  let leaveContent =  <Box> <Button onClick={localHandleLeave}>Leave Game</Button></Box>;
   
-    return (
+
+  if (leaveGame) {
+    leaveContent = <Box style={{ fontFamily: 'sans-serif', fontWeight: 600 }}> Do you really want to leave the game?
+                    <Button onClick={props.leaveCallback}>Yes, I'm done.</Button>&nbsp;<Button onClick={cancelLeave}>I'll stay!</Button>
+                  </Box>;
+  }
+
+  return (
     <Box>
       <Dialog 
               disableBackdropClick={true}

@@ -22,7 +22,8 @@ export class GamePlay extends React.Component{
             showEndgame:false,
             countdownData: null,
             leaveGame: false,
-            interval: null
+            interval: null,
+            showSeconds: false
         }
         this.winningPlayerArray = [];
         this.setUpEventHandlers();
@@ -56,7 +57,7 @@ export class GamePlay extends React.Component{
         */
         this.socket.on('countdown-question',(data) =>{
             console.debug('countdown-question event: %o',data);
-            this.setState({countdownData: data,timerText: data.timerMessage, interval:data.interval});
+            this.setState({countdownData: data,timerText: data.timerMessage, interval:data.interval, showSeconds:data.showCountdown});
         });
 
             /* General handler for countdown answer timers received from the server.
@@ -64,7 +65,8 @@ export class GamePlay extends React.Component{
             @param data.timerMessage message to show above the seconds remaining
             @param data.showCountdown Boolean of whether to show the digits counting down
         */
-        this.socket.on('countdown-answer',(data) =>{ // bascially a no-op
+        this.socket.on('countdown-answer',(data) =>{ 
+            this.setState({countdownData: data, timerText: data.timerMessage, interval:data.interval, showSeconds:data.showCountdown})
             console.debug('countdown-answer event: %o',data,);
         });
         
@@ -149,6 +151,7 @@ export class GamePlay extends React.Component{
                                     interval={this.state.interval?this.state.interval:1}
                                     showTimerText={true}
                                     showSeconds={false}
+                                    leaveCallback={this.handleLeaveGame}
                                     >
                         <PlayerListScores players={this.state.players} 
                                         ref={this.playerListElement}
@@ -168,7 +171,8 @@ export class GamePlay extends React.Component{
                                     count={(this.state.countdownData  && this.state.countdownData.count)?this.state.countdownData.count: 0}
                                     interval={this.state.interval?this.state.interval:1}
                                     showTimerText={true}
-                                    showSeconds={true}
+                                    showSeconds={this.state.showSeconds}
+                                    leaveCallback={this.handleLeaveGame}
                                     >
                         <Question gameRoomName={this.gameConfig.roomname} 
                                     thisPlayer={this.gameConfig.player} 
@@ -188,7 +192,9 @@ export class GamePlay extends React.Component{
                                     dialogTitle={this.state.questionDialogTitle} 
                                     count={this.state.countdownData.count}
                                     interval={this.state.countdownData.interval}
-                                    showTimerText={false}>
+                                    showTimerText={false}
+                                    leaveCallback={this.handleLeaveGame}
+                                    >
                         <WinnerList leaveGame={this.handleLeaveGame}  winners={this.winningPlayerArray} />
                     </QuestionDialog>
                 </Box> 
@@ -207,6 +213,7 @@ export class GamePlay extends React.Component{
                 interval={this.state.interval?this.state.interval:1}
                 showTimerText={false}
                 showSeconds={false}
+                leaveCallback={this.handleLeaveGame}
                 >
             </QuestionDialog>
         </Box> 

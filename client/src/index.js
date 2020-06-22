@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom';
 
 import './index.css';
 import { Button } from "./components/Button";
-import {JoinGame } from "./components/Game";
+import {JoinGame } from "./components/JoinGame";
 import {CreateGame} from "./components/CreateGame";
 import InfoTwoToneIcon from '@material-ui/icons/InfoTwoTone';
 import InfoDialog from "./components/InfoDialog";
@@ -36,6 +36,12 @@ export default function App() {
           <Route path="/join">
             <Join  />
           </Route>
+          <Route path="/playing">
+            <Playing  />
+          </Route>
+          <Route path="/oplaying">
+            <OPlaying  />
+          </Route>
           <Route path="/create">
             <Create />
           </Route>
@@ -62,6 +68,14 @@ function Home() {
 
 function Join() {
   return <JoinGame />;
+}
+
+function Playing(){ // An alias for Join with player params to handle page refresh to rejoin an existing game
+  return <JoinGame />
+}
+
+function OPlaying(){ // An alias for CreateGame with Owner params to handle page refresh to rejoin an existing game
+  return <CreateGame />
 }
 
 function Create() {

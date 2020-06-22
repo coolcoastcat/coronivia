@@ -121,6 +121,7 @@ exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
 
     });
     console.log("put "+questions.length+ " questions into return array which should match requested questions: "+questionCount);
+    questions = shuffle(questions);
     return questions;
 }
 

@@ -165,9 +165,12 @@ class Question extends React.Component {
              }
             return (
                     <Grid container>
+                    <Grid className={classes.sans} item xs={6}><Box className={classes.questionDataHd} component="span">Category:</Box> {renderHTML(qObj.category)}</Grid><Grid className={classes.sans}  item xs={6}><Box className={classes.questionDataHd} component="span">Difficulty: {qObj.difficulty} </Box></Grid>
+                    <Grid className={classes.sans} item xs={12}><Box className={classes.questionDataHd} component="span">&nbsp;&nbsp;Sub-Category:</Box> {renderHTML(qObj.sub_category)}</Grid>
+
                         <Grid item xs={12}>
                             <Grid  className={answerStyle} container>
-                                <Grid className={classes.question} item >{renderHTML(qObj.question)}</Grid>
+                                <Grid className={classes.question} item >{(qObj && qObj.question)? renderHTML(qObj.question) : 'Loading question...'}</Grid>
                                 <Grid className={classes.label}  item xs={4}>
                                 <Box p={1} >
                                     Sent:
@@ -221,7 +224,8 @@ class Question extends React.Component {
             return(
                 
                 <Grid container>
-                    <Grid className={classes.sans} item xs={6}><Box className={classes.questionDataHd} component="span">Category:</Box> {qObj.category}</Grid><Grid className={classes.sans}  item xs={6}><Box className={classes.questionDataHd} component="span">Difficulty: {qObj.difficulty} </Box></Grid>
+                    <Grid className={classes.sans} item xs={6}><Box className={classes.questionDataHd} component="span">Category:</Box> {renderHTML(qObj.category)}</Grid><Grid className={classes.sans}  item xs={6}><Box className={classes.questionDataHd} component="span">Difficulty: {qObj.difficulty} </Box></Grid>
+                    <Grid className={classes.sans} item xs={12}><Box className={classes.questionDataHd} component="span">&nbsp;&nbsp;Sub-Category:</Box> {renderHTML(qObj.sub_category)}</Grid>
                     <Grid item xs={12} >
                         <Box  p={3}>                
                         <FormControl component="fieldset">
