@@ -30,6 +30,7 @@ const useStyles = makeStyles((theme) => ({
   formControl: {
     margin: theme.spacing(1),
     minWidth: 170,
+    maxWidth: 250
   },
   selectEmpty: {
     marginTop: theme.spacing(2),
@@ -63,6 +64,9 @@ const useStyles = makeStyles((theme) => ({
   panel: {
     maxWidth: 300,
     textAlign: 'center'
+  },
+  fill: {
+    flexGrow: 1
   }
 }));
 
@@ -207,7 +211,7 @@ export function CreateGameForm(props) {
         <Paper>
         <Box  p={2}>
         <form onSubmit={handleSubmit}>
-        <Grid  container>
+        <Grid   justify="center" container>
         <Grid item xs={12}>
             <ValidationTextField
               className={classes.margin}
@@ -278,7 +282,7 @@ export function CreateGameForm(props) {
                 </FormControl>
               </Grid>
             
-              <Grid item sm={6}>
+              <Grid className={classes.formControl}  item sm={12}>
                   <FormControl required className={classes.formControl}>
                     <InputLabel id="demo-mutiple-checkbox-label">Categories</InputLabel>
                     <Select
@@ -301,7 +305,7 @@ export function CreateGameForm(props) {
                   </FormControl>
                 </Grid>
     
-              <Grid item sm={6}>
+              <Grid item sm={12}>
                   <FormControlLabel
               control={<GreenCheckbox checked={pauseBetweenRounds} onChange={handlePauseChange} name="pauseBetweenRounds" />}
               label="Pause beteween rounds"

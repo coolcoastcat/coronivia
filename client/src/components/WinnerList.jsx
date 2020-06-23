@@ -33,6 +33,18 @@ import { makeStyles } from '@material-ui/core/styles';
 
 export default function WinnerList(props){
     const classes = useStyles();
+    const MAX_NAME_LENGTH = 11;
+
+    function truncatePlayerName(str) {
+        if(!str) { return null;}
+        // If the length of str is less than or equal to num
+        // just return str--don't truncate it.
+        if (str.length <= MAX_NAME_LENGTH) {
+          return str;
+        }
+        // Return str truncated with '...' concatenated to the end of str.
+        return str.slice(0, (MAX_NAME_LENGTH - 3)) + '...';
+      }
 
     function handleLeaveGame(){
         props.leaveGame();
@@ -44,8 +56,8 @@ export default function WinnerList(props){
             winnerOutput =
             winners.map((winner,index)=>
                     [
-                    <Grid className={classes.winnerList} key={winner.name} item xs={3}> {winner.name}</Grid>,
-                    <Grid className={classes.winnerList} key={winner.score} item xs={9}> {winner.score}</Grid>
+                    <Grid className={classes.winnerList} key={winner.name} item xs={8}> {truncatePlayerName(winner.name)}</Grid>,
+                    <Grid className={classes.winnerList} key={winner.score} item xs={4}> {winner.score}</Grid>
                     ]
                 );
         } else {
@@ -56,8 +68,8 @@ export default function WinnerList(props){
     return(
         <Grid container spacing={2} >
             {(winners.length > 1)?<Grid className={classes.tieTitle}  item xs={12}>It Was A Tie!</Grid>:''}
-            {(winners.length > 1)?<Grid className={classes.winnerListHead} item xs={3}>Player</Grid>:''}
-            {(winners.length > 1)?<Grid className={classes.winnerListHead}item xs={9}>Score</Grid>:''}
+            {(winners.length > 1)?<Grid className={classes.winnerListHead} item xs={8}>Player</Grid>:''}
+            {(winners.length > 1)?<Grid className={classes.winnerListHead}item xs={4}>Score</Grid>:''}
             {winnerOutput}
             <Grid style={{fontSize:'16px'}} item xs={12} ><Button className={classes.colorfulButton}  onClick={handleLeaveGame} >The End</Button></Grid>
         </Grid>

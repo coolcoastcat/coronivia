@@ -333,7 +333,7 @@ class Game extends React.Component{
       switch(this.state.gameStatus){
         case 'WAITING':
           return(
-            <Grid container>
+            <Grid   justify="center" container>
               <Grid item sm={12}>
                 <h2>{ headerMessage }</h2>
               </Grid>
@@ -343,7 +343,7 @@ class Game extends React.Component{
               <TextField id="gameroom" label='Share this link' variant='outlined' value={gameURL} style={{  minWidth: 200}} size='small' />
               {clipboardIcon}
               </Box>
-              <Grid container>
+              <Grid justify="center" container>
                 
                 <Grid item sm={6}  style={{ padding: '5px'}} >
                   <Paper elevation={3}>
@@ -351,9 +351,9 @@ class Game extends React.Component{
                   </Paper>
                 </Grid>
 
-                <Grid  style={{ padding: '5px'}} item sm={6}>
-                  <Paper elevation={3}>
-                    <Box p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
+                <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
+                  <Paper  elevation={3}>
+                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
                   </Paper>
                 </Grid>
               

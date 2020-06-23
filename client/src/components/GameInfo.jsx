@@ -27,7 +27,7 @@ export class GameInfo extends React.Component{
 
     render(){
         return(
-            <Grid container>
+            <Grid   justify="center" container>
                 <Grid item xs={12}>
                 GAME INFO
                 </Grid>
@@ -95,7 +95,7 @@ export class GameInfo extends React.Component{
                     Owner:
                     </Box>
                 </Grid>
-                <Grid   style={content}   container item xs={6}>
+                <Grid  style={content}   container item xs={6}>
                     <Box p={1}>
                     {this.truncatePlayerName(this.gameConfig.owner)}
                     </Box>

@@ -43,7 +43,7 @@ class PlayerListScores extends React.Component{
             players: (props.players) ? props.players : null,
             showScore: props.showScore
         };
-        this.MAX_NAME_LENGTH = 10;
+        this.MAX_NAME_LENGTH = 11;
     }
 
     truncatePlayerName(str) {
@@ -80,8 +80,8 @@ class PlayerListScores extends React.Component{
             playerItems = this.state.players.map((player,index) => {
                 let connectedStyle = (!player.connected)? classes.disconnected : classes.none;
                 return([
-                    <Grid className={this.getClass(index)} key={player.name} xs={4} item><span className={connectedStyle}>{ this.truncatePlayerName(player.name) }</span>{ player.name === this.player && <span> (you) </span> }</Grid>,
-                    <Grid className={this.getClass(index)}  key={player.score} xs={8} item>{(this.state.showScore)?player.score : '' }</Grid>
+                    <Grid className={this.getClass(index)} key={player.name} xs={8} item><span className={connectedStyle}>{ this.truncatePlayerName(player.name) }</span>{ player.name === this.player && <span> (you) </span> }</Grid>,
+                    <Grid className={this.getClass(index)}  key={player.score} xs={4} item>{(this.state.showScore)?player.score : '' }</Grid>
                     ])
                 }
                 ) 
@@ -89,8 +89,8 @@ class PlayerListScores extends React.Component{
         
         return(
            <Grid container>
-                <Grid className={classes.label}  key={'title'} xs={4} item>Players</Grid>
-                <Grid className={classes.label}  key={'score'} xs={8} item>{(this.state.showScore)? 'Score': ''}</Grid> 
+                <Grid className={classes.label}  key={'title'} xs={8} item>Players</Grid>
+                <Grid className={classes.label}  key={'score'} xs={4} item>{(this.state.showScore)? 'Score': ''}</Grid> 
                 {playerItems}
             </Grid>
         );
