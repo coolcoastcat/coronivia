@@ -3,25 +3,18 @@ import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import { Redirect } from "react-router-dom";
 import { GameInfo } from "./GameInfo";
-import { GamePlay } from "./GamePlay";
-import { JoinGameForm } from "./forms";
+import GamePlay from "./GamePlay";
 import PlayerListScores from './PlayerListScores';
-import { confirmAlert } from 'react-confirm-alert'; // Import
-import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
+import AlertDialog from './AlertDialog';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
-import AlertDialog from "./AlertDialog";
-import Icon from '@material-ui/core/Icon';
 import AssignmentTwoToneIcon from '@material-ui/icons/AssignmentTwoTone';
 import AssignmentTurnedInTwoToneIcon from '@material-ui/icons/AssignmentTurnedInTwoTone';
 import { green } from '@material-ui/core/colors';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
-
-import io from "socket.io-client/lib";
 import config  from "./config";
-import QuestionDialog from "./QuestionDialog";
 
 let SERVER_URI = null;
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -77,7 +70,7 @@ function getErrorPhrase(){
 class Game extends React.Component{
     constructor(props){
       super(props);
-      console.log("Game constructor received props: o%",props);
+      console.debug("Game constructor received props: o%",props);
       this.gameConfig = props.gameConfig;
       this.state = {
         gameStatus: props.gameConfig.gameStatus,
@@ -86,6 +79,7 @@ class Game extends React.Component{
         serverConnection: 'disconnected',
         isLoading: true,
         error: null,
+        errorMsg: null,
         copied: false,
         confirmCancel: false,
         confirmLeave: false
@@ -93,8 +87,7 @@ class Game extends React.Component{
       this.socket = props.socket;
       this.setUpEventHandlers();
       this.playerListElement = React.createRef();
-      this.handleStartGame = this.handleStartGame.bind(this);
-      this.handleCancelGame = this.handleCancelGame.bind(this);
+
     }
   
      /* Clean up once the game is unmounted */
@@ -107,61 +100,62 @@ class Game extends React.Component{
           @param playerArray The updated player array to show.
       */
      updatePlayers(playerArray){
-      console.log("Game received player array update: %o",playerArray);
+      console.debug("Game received player array update: %o",playerArray);
   
       this.setState({players: playerArray});
-      console.log("updating PlayerList with %o",this.state.players);
+      console.debug("updating PlayerList with %o",this.state.players);
       if(this.playerListElement.current){
         this.playerListElement.current.updatePlayers(this.state.players); // Update the child
       }
     }
   
      setUpEventHandlers(){
-      console.log("Setting up socket.io event hanlders for socket: "+this.socket.id);
+      console.debug("Setting up socket.io event hanlders for socket: "+this.socket.id);
      
   
       this.socket.on('game-start',(data) =>{
-        console.log('event: game-start with data: %o',data);
+        console.debug('event: game-start with data: %o',data);
+        this.gameConfig.gameStatus = data.gameStatus;
         this.setState({ gameStatus: data.gameStatus }); // Kick things off!
       });
     
       this.socket.on('player-change',(playerArray) =>{
-        console.log('Game event: player-change with data: %o',playerArray);
+        console.debug('Game event: player-change with data: %o',playerArray);
         this.setState({players: playerArray});
         if(this.playerListElement.current){
           this.playerListElement.current.updatePlayers(this.state.players); // Update the child
         }
-        console.log('new Game status: %o',this.state);
+        console.debug('new Game status: %o',this.state);
       });
     
     
       this.socket.on('round-start',(data) =>{
-        console.log('event: round-start with data: %o',data);
+        console.debug('event: round-start with data: %o',data);
       });
     
       this.socket.on('question',(data) =>{
-        console.log('event: question with data: %o',data);
+        console.debug('event: question with data: %o',data);
       });
     
       this.socket.on('answer',(data) =>{
-        console.log('event: answer with data: %o',data);
+        console.debug('event: answer with data: %o',data);
       });
     
   
   
       this.socket.on('game-cancelled',(data) =>{
-        console.log('event: game-cancelled with data: %o',data);
+        console.debug('event: game-cancelled with data: %o',data);
         this.handleEndGame();
   
       });
     
       this.socket.on('timer-update',(data) =>{
-        console.log('event: timer-update with data: %o',data);
+        console.debug('event: timer-update with data: %o',data);
       });
     
     
       this.socket.on('disconnect',(reason) => {
-        console.log('event: disconnect from server for reason: '+reason);
+        console.debug('event: disconnect from server for reason: '+reason);
         if(reason === 'transport closed') {
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
@@ -172,18 +166,18 @@ class Game extends React.Component{
       });
     
       this.socket.on('connect_failed',() => {
-        console.log('event: connection to server failed');
+        console.debug('event: connection to server failed');
       })
     
       this.socket.on('reconnect',(attemptNumber) => {
-        console.log('event: reconnected with server after '+attemptNumber+' tries');
+        console.debug('event: reconnected with server after '+attemptNumber+' tries');
       });
     }
   
   
     /* Handles the button click to start the game! */
-    handleStartGame(){
-    console.log("DEBUG handleStartGame() called with object this: %o",this);
+    handleStartGame = ()=>{
+    console.debug("DEBUG handleStartGame() called with object this: %o",this);
      this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
               (data)=>{
                 if(data.success){
@@ -194,56 +188,26 @@ class Game extends React.Component{
     }
   
     /*Called when game is cancelled or naturally ends*/
-    handleEndGame(){
-      console.log("handleEndGame() called");
-      confirmAlert({
-        customUI: ({ onClose }) => {
-          this.socket.close();
-          return (
-            <div className='score-wrapper'>
-              <div className='score-dialog'>
-                <h2>Game Ended - Final Scores</h2>
-                <p><Button onClick={() => {                  
-                    this.setState({leaveGame: true});
-                    onClose();}}
-                    type="button" 
-                    buttonSize="btn--small"
-                    buttonStyle='btn--success--solid'>Close</Button>
-                </p>
-                <p>
-                <PlayerListScores thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
-                </p>
-              </div>
-            </div>
-          );
-        }
-      });
-  
+    handleEndGame = ()=>{
+      this.setState({leaveGame:false, confirmLeave: false, gameStatus:'ENDED'});
+      this.socket.close();
+      console.debug("handleEndGame(): displaying final scores and closed socket");
     }
   
-    handleError(errorMsg){
-      console.log("handleError(): "+errorMsg);
-      confirmAlert({
-        title: getErrorPhrase(),
-        message: errorMsg,
-        buttons: [
-          {
-            label: 'Ok',
-            onClick: () => {}
-          }
-        ]
-      });
+    handleError = (errorMsg)=>{
+      this.setState({errorMsg: errorMsg, error: true});
+      console.error("handleError(): "+errorMsg);
     }
     
     /* Handles the button click to start the game! */
     handleCancelGame = ()=>{
         this.setState({confirmCancel: false}); // Hide the cancel dialog
 
-        console.log("cancelling the game");
+        console.debug("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
-        console.log('Cancel game result: %o',data);
-        if(!data.success){ this.handleError(data.error); }
-        // Server should kick everyone out and display final score
+        console.debug('Cancel game result: %o',data);
+        if(!data.success){ this.handleError(data.error); } 
+       
         });
     }
   
@@ -251,8 +215,8 @@ class Game extends React.Component{
     handleLeaveGame = ()=>{
    
         this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
-        console.log('Player '+this.gameConfig.player+' leaving game result: %o',data);
-        this.setState({leaveGame:true, confirmLeave: false});
+        console.debug('Player '+this.gameConfig.player+' leaving game result: %o',data);
+        this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
         this.socket.close();
         });
     }
@@ -262,7 +226,7 @@ class Game extends React.Component{
       var copyText = document.getElementById("gameroom");
       copyText.select();
       document.execCommand("copy");
-      console.log("copied link to clipboard");
+      console.debug("copied link to clipboard");
       this.setState({copied: true});
       return false;
     }
@@ -274,39 +238,39 @@ class Game extends React.Component{
   
     render() {
       const { classes } = this.props;
-      console.log("classes object: %o",classes);
 
       if(this.state.leaveGame){
         return <Redirect to='/' />
       }
 
+      
+
       if(this.state.confirmCancel){
-        return <QuestionDialog  showQuestion={true} 
-                                timerText={this.state.timerText} 
-                                dialogTitle={'Cancel the game?'}
-                                leaveGame={true} 
-                                stayCallback={this.cancelLeave}
-                                leaveCallback={this.handleCancelGame}>
-                                Do you really want to cancel the game? This will end the game for all players.
-                </QuestionDialog>;
+        return <AlertDialog 
+                  buttonContinueText={'Cancel Game :('} 
+                  buttonCancelText={'Play On!'}
+                  dialogText={'Do you really want to cancel the game? This will end the game for all players.'} 
+                  dialogTitle={'Cancel the game?'} 
+                  callback={this.handleCancelGame}
+                  cancelCallback={this.cancelLeave}>
+               </AlertDialog>;
       }
 
       if(this.state.confirmLeave){
-        return <QuestionDialog  showQuestion={true} 
-                                timerText={this.state.timerText} 
-                                dialogTitle={'Leave the game?'}
-                                leaveGame={true} 
-                                stayCallback={this.cancelLeave}
-                                leaveCallback={this.handleLeaveGame}>
-                                Do you really want to leave the game?
-                </QuestionDialog>;
+        return <AlertDialog 
+                  buttonContinueText={'Leave :('} 
+                  buttonCancelText={'Play On!'}
+                  dialogText={'Do you really want to leave the game?'} 
+                  dialogTitle={'Leave the game?'} 
+                  callback={this.handleLeaveGame}
+                  cancelCallback={this.cancelLeave}>
+               </AlertDialog>;
       }
       
       let headerMessage = 'Welcome to Game Room: '+this.gameConfig.roomname+'!';
       let waitingButtons = <p><Button onClick={()=>this.setState({confirmLeave: true})}
                   type="button" 
                   variant="outlined" >Leave the Game</Button></p>;
-      let playingButtons = waitingButtons;
   
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
@@ -317,29 +281,27 @@ class Game extends React.Component{
                   type="button" 
                   variant="outlined" 
                   >Cancel Game</Button>
-          {/* 
-        <AlertDialog buttonContinueText={'Start'} buttonCancelText={'Wait some more'}
-                     dialogText={'Click start to beging the game.'} 
-                     dialogTitle={'Starting the Game'} callback={this.handleStartGame}>
-        Click Start to begin!</AlertDialog>*/}
         </Box>;
-        playingButtons = <Box>
-        <Button onClick={() => {this.handleCancelGame();}}
-                  type="button" >End the Game</Button></Box>;
-  
+ 
   
       }
       const gameURL = getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname;
       const clipboardIcon = (this.state.copied)? <AssignmentTurnedInTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} /> :<AssignmentTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} />;
   
-      if (this.state.error) { // REPLACE WITH DIALOG
-        return <p>{ this.state.error }</p>;
+      if (this.state.error) { 
+        return ( 
+          <AlertDialog buttonContinueText={'Ok'} 
+            dialogText={this.state.joinErrorMsg} 
+            dialogTitle={getErrorPhrase()}
+            callback={()=>this.setState({error:false})} >
+          </AlertDialog>
+        );
       }
   
       switch(this.state.gameStatus){
         case 'WAITING':
           return(
-            <Grid container>
+            <Grid   justify="center" container>
               <Grid item sm={12}>
                 <h2>{ headerMessage }</h2>
               </Grid>
@@ -349,7 +311,7 @@ class Game extends React.Component{
               <TextField id="gameroom" label='Share this link' variant='outlined' value={gameURL} style={{  minWidth: 200}} size='small' />
               {clipboardIcon}
               </Box>
-              <Grid container>
+              <Grid justify="center" container>
                 
                 <Grid item sm={6}  style={{ padding: '5px'}} >
                   <Paper elevation={3}>
@@ -357,9 +319,9 @@ class Game extends React.Component{
                   </Paper>
                 </Grid>
 
-                <Grid  style={{ padding: '5px'}} item sm={6}>
-                  <Paper elevation={3}>
-                    <Box p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
+                <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
+                  <Paper  elevation={3}>
+                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
                   </Paper>
                 </Grid>
               
@@ -380,7 +342,17 @@ class Game extends React.Component{
         );
   
         case 'ENDED':
-          return(<PlayerListScores showScore={true}  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />);
+          goTo({page: '/'},"Coronivia","/");
+          return(
+            <Paper>
+              <Box style={{fontSize:'30px'}} m={2}>The game was cancelled. Final scores:</Box>
+              <Box p={2}><PlayerListScores showScore={true}  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} /></Box>
+              <Box p={2}>
+                <Button type="submit" size="small" variant="contained" className={classes.colorfulButton}  onClick={()=>this.setState({leaveGame:true})}>
+              The End</Button>
+              </Box>
+            </Paper>
+        );
   
         default:
           return(<div>Really shouldn't get here</div>);
@@ -394,100 +366,10 @@ class Game extends React.Component{
 
 export default withStyles(styles)(Game);
 
-  /* JoinGame includes the JoinGameForm and passeses in a function-as-prop
-     to have the form, on submit, set the form parameters into JoinGame object
-     in order to fetch from the server create-game api. The returned JSON will be
-     used to show the user 
-  */
- export class JoinGame extends React.Component{
-    constructor(props){
-      super(props);
-  
-      this.query = useQuery();
-  
-      this.state = { 
-        joined: false
-      }
-      this.socket = null; // Initialize
-      this.gameConfig = {}; // The parsed config to send to Game
-      this.joinGameResponseJSON = {}; // Raw JSON response from the Server create-game API
-      this.handleFormSubmit = this.handleFormSubmit.bind(this);
-      this.playerListElement = React.createRef(); // Bind to Game method for passing status
-    }
-   
-    /* Sets up the socket event handlers for the Join activities */
-    setUpEventHandlers(){
-  
-      this.socket.on('player-change',(data) =>{
-        console.log('JoinGame event: player-change with data: %o',data);
-        this.playerListElement.current.updatePlayers(data); // Update the child Game
-      });
-  
-      /* Handle generic server error ¯\_(ツ)_/¯ */
-      this.socket.on('error',(data) => {
-        console.log('event: error with data: %o',data);
-        confirmAlert({
-          title: getErrorPhrase(),
-          message: data.error,
-          buttons: [
-            {
-              label: 'Ok',
-              onClick: () => {}
-            }
-          ]
-        });
-      });
-  
-    }
-  
-    handleJoinErrors(errorMsg){
-      confirmAlert({
-        title: getErrorPhrase(),
-        message: errorMsg,
-        buttons: [
-          {
-            label: 'Ok',
-            onClick: () => {}
-          }
-        ]
-      });
-    }
-  
-    /* Function passed to JoinGameForm to accept form data to submit to backend API 
-      @param joinGameData Data collected from the JoinGameForm
-    */ 
-    handleFormSubmit(joinGameData){
-
-      this.socket = io(SERVER_URI);
-      this.setUpEventHandlers();
-      this.socket.on('connect',() =>{
-        console.log('client socket connected with id: '+this.socket.id);
-        this.setState({serverConnection: 'connected', isLoading: false});
-        this.socket.emit('join',{roomname: joinGameData.roomname, player: joinGameData.player},(data)=>{
-          if(data.success){
-            this.gameConfig = data;
-            this.setState({joined: true}); // Causes a referesh and Game will get created
-            console.log("Socket opened by: "+joinGameData.player+" to join the game: "+joinGameData.roomname);
-          } else {
-            // Handle errors
-            this.handleJoinErrors(data.error);
-            this.socket.close();
-          }
-        }
-        );
-      });
-    }
-  
-    render() {
-      if(!this.state.joined){
-        return( 
-          <JoinGameForm roomname={this.query.get("roomname")}  handleFormSubmit={this.handleFormSubmit} />
-        );
-      } else {
-        return(
-          <Game socket={this.socket} gameConfig={this.gameConfig}   ref={this.playerListElement}  />
-        );
-      }
-    }
-  
+function goTo(page, title, url) {
+  if ("undefined" !== typeof window.history.pushState) {
+    window.history.pushState({page: page}, title, url);
+  } else {
+    window.location.assign(url);
   }
+}

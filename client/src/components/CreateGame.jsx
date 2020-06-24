@@ -1,6 +1,7 @@
 import React from 'react';
 import Game from './Game';
 import { confirmAlert } from 'react-confirm-alert'; // Import
+import AlertDialog from './AlertDialog';
 import io from "socket.io-client/lib";
 import { CreateGameForm } from "./forms";
 import config  from "./config";
@@ -13,6 +14,11 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 }
 
 
+/* Scrape the query params
+*/
+function useQuery() {
+  return new URLSearchParams(window.location.search);
+}
  
 /* Get a random funny error phrase to prefix dialogs */
 function getErrorPhrase(){
@@ -27,29 +33,38 @@ in order to fetch from the server create-game api. The returned JSON will be
 used to show the user 
 */
 export class CreateGame extends React.Component{
-constructor(props){
-super(props);
-this.state = { 
-created: false,
-joined: false
-}
-this.gameConfig = {}; // The parsed config to send to Game
-this.createdGameResponseJSON = {}; // Raw JSON response from the Server create-game API
-this.handleFormSubmit = this.handleFormSubmit.bind(this);
-this.playerListElement = React.createRef(); // Bind to Game method for passing status
-this.socket = null;
+  constructor(props){
+    super(props);
 
-}
+    this.query = useQuery();
+
+    this.state = { 
+      created: false,
+      joined: false,
+      joinError: false,
+      joinErrorMsg: null
+    }
+    this.gameConfig = {}; // The parsed config to send to Game
+    this.createdGameResponseJSON = {}; // Raw JSON response from the Server create-game API
+    this.handleFormSubmit = this.handleFormSubmit.bind(this);
+    this.playerListElement = React.createRef(); // Bind to Game method for passing status
+    this.socket = null;
+
+    if(this.query.get("roomname") && this.query.get("player") &&  this.query.get("id")  ) {
+      this.joinGame(this.query.get("roomname"),this.query.get("player"),this.query.get("id"));
+    }
+
+  }
 
 setUpEventHandlers(){
 
 this.socket.on('game-joined',(data)=>{
 this.setState({created: true});
-console.log("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
+console.debug("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
 });
 
 this.socket.on('player-change',(data) =>{
-console.log('CreateGame event: player-change with data: %o',data);
+console.debug('CreateGame event: player-change with data: %o',data);
 this.playerListElement.current.updatePlayers(data); // Update the child Game
 });
 
@@ -59,55 +74,79 @@ console.log('event: error with data: %o',data);
 }
 
 handleJoinErrors(errorMsg){
-confirmAlert({
-title: getErrorPhrase(),
-message: errorMsg,
-buttons: [
-{
-label: 'Ok',
-onClick: () => {}
+  this.setState({joinError: true, joinErrorMsg: errorMsg});
 }
-]
-});
+// TODO - DECIDE IF THERE SHOULD BE AN owner-join EVENT OR IF THE CONFIG I RECEIVE FROM THE JOIN EVENT IS SUFFICIENT TO REINSTANTIATE THE GAME 
+// ALONG WITH THE OWNER ID (WHICH I THINK IT SHOULD )
+joinGame(roomname,player,ownerID){
+  if(!this.socket){
+    this.setupSocket();
+  }
+  this.socket.emit('join',{roomname: roomname, player: player},(data)=>{
+    console.log('DEBUG CreatGame.joinGame(): owner joined game with data: %o',data);
+    if(data.success){
+      this.gameConfig = data;
+      this.gameConfig.ownerID = ownerID;
+      this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
+      goTo({page: 'oplaying'},"Playing","/oplaying?roomname="+roomname+"&player="+player+"&id="+ownerID);
+      console.debug("Socket opened by owner: "+player+" to join the game: "+roomname);
+    } else {
+      // Handle errors
+      this.handleJoinErrors(data.error);
+      // this.socket.close(); // I think we want to retry in the create game case
+    }
+
+  });
+}
+
+setupSocket(){
+  this.socket = io(SERVER_URI);
+  this.setUpEventHandlers();
 }
 
 /* Function passed to CreateGameForm to accept form data to submit to backend API 
 */ 
 handleFormSubmit(createGameData){
 
-this.socket = io(SERVER_URI);
-this.setUpEventHandlers();
-this.socket.on('connect',() =>{
-console.log('client socket connected with id: '+this.socket.id);
+  this.setupSocket();
+  this.socket.on('connect',() =>{
+  console.debug('client socket connected with id: '+this.socket.id);
 
-// Handle case if Owner's client got disconnected 
-// TODO: consider checking with server if game exists. It's possible the game server got restarted
-//       and all games flushed. If so, message should be shown and game should be recreated.
-if(!this.state.created){
-// Create the game on the server
-this.socket.emit('create-game',{rounds:createGameData.rounds,
-                 questions:createGameData.questions,
-                 difficulty:createGameData.difficulty, 
-                 owner:createGameData.owner}, (createGameResp)=>{ // Process the server response
-                   console.log("create-game API response: %o",createGameResp);
-                   
-                   this.gameConfig = createGameResp;
-                   // Now join this game
-                   this.socket.emit('join',{roomname: createGameResp.roomname, player: createGameResp.player},(data)=>{
-                     if(data.success){
-                       this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
-                       console.log("Socket opened by: "+createGameResp.player+" to join the game: "+createGameResp.roomname);
-                     } else {
-                       // Handle errors
-                       this.handleJoinErrors(data.error);
-                       // this.socket.close(); // I think we want to retry in the create game case
-                     }
-                   }
-                   );
-});
+  // Handle case if Owner's client got disconnected 
+  // TODO: consider checking with server if game exists. It's possible the game server got restarted
+  //       and all games flushed. If so, message should be shown and game should be recreated.
+  if(!this.state.created){
+    // Create the game on the server
+    this.socket.emit('create-game',{rounds:createGameData.rounds,
+                  questions:createGameData.questions,
+                  difficulty:createGameData.difficulty, 
+                  owner:createGameData.owner,
+                  categories: createGameData.categories,
+                  pauseBetweenRounds: createGameData.pauseBetweenRounds}
+                  , (createGameResp)=>{ // Process the server response
+                    console.debug("create-game API response: %o",createGameResp);
+                    
+                    this.gameConfig = createGameResp;
+                    console.debug("received game config: %o",this.gameConfig);
+                    // Now join this game
+                      this.joinGame(createGameResp.roomname, createGameResp.player, createGameResp.ownerID);
+                    }
+                    );
 
 } else {
-console.log("Game "+this.gameConfig.roomname+" already created");
+  console.debug("Game "+this.gameConfig.roomname+" already created");
+  // Re-join this game
+  this.socket.emit('join',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
+    if(data.success){
+      this.setState({created: true, joined:true}); // Causes a referesh and Game will get created
+      console.debug("Socket opened by: "+this.gameConfig.player+" to re-join the game: "+this.gameConfig.roomname);
+    } else {
+      // Handle errors
+      this.handleJoinErrors(data.error);
+      // this.socket.close(); // I think we want to retry in the create game case
+    }
+}
+);
 }
 });
 }
@@ -115,6 +154,17 @@ console.log("Game "+this.gameConfig.roomname+" already created");
 
 
 render() {
+  if(this.state.joinError){
+    return (
+      <AlertDialog buttonContinueText={'Ok'} 
+      dialogText={this.state.joinErrorMsg} 
+      dialogTitle={getErrorPhrase()}
+      callback={()=>this.setState({joinError:false})} >
+        </AlertDialog>
+    );
+  }
+
+
 if(!this.state.created){
 return(
 <CreateGameForm handleFormSubmit={this.handleFormSubmit} />
@@ -126,4 +176,12 @@ return(
 }
 }
 
+}
+
+function goTo(page, title, url) {
+  if ("undefined" !== typeof window.history.pushState) {
+    window.history.pushState({page: page}, title, url);
+  } else {
+    window.location.assign(url);
+  }
 }

@@ -2,7 +2,33 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.6 - Current__
+__v0.0.7 - Current__
+Bug fixes
+* Cleaned up unused files
+* Resolved linting complaints
+* #[37](https://github.com/coolcoastcat/coronivia/issues/37) - Can't stay once Player clicks leave game from Waiting room.
+* #[36](https://github.com/coolcoastcat/coronivia/issues/36) - Question Categories are not shuffled.
+* #[34](https://github.com/coolcoastcat/coronivia/issues/34) - Category multi-select is a mess
+* #[33](https://github.com/coolcoastcat/coronivia/issues/33) - UI: Player's panel doesn't fill screen in waiting room
+* #[31](https://github.com/coolcoastcat/coronivia/issues/31) - UI: Short question titles have answer wrap up the line
+* #[30](https://github.com/coolcoastcat/coronivia/issues/30) - Never let timer show less than 0
+* #[29](https://github.com/coolcoastcat/coronivia/issues/29) - Handle disconnect and reconnect
+* #[13](https://github.com/coolcoastcat/coronivia/issues/13) - Player Joins after game starts
+
+Enhancements
+* #[32](https://github.com/coolcoastcat/coronivia/issues/32) - Turn timer yellow when under 50% remaining and red when under 25% remaining
+* #[28](https://github.com/coolcoastcat/coronivia/issues/28) - Show spinner while displaying other dialogs
+* #[25](https://github.com/coolcoastcat/coronivia/issues/25) - Add a Coronivia Info Dialog
+* #[23](https://github.com/coolcoastcat/coronivia/issues/23) - Add Game Create Feature to pause between rounds
+* #[19](https://github.com/coolcoastcat/coronivia/issues/19) - Investigate if there is an easy way to limit categories of questions to a subset. If not, consider pulling a pool of question from mainstream categories. 
+* #[18](https://github.com/coolcoastcat/coronivia/issues/18) - Add a check when a user trys to navigate away from the page to warn them they will lose their game.
+* 
+
+Known Issues
+* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
+
+
+__v0.0.6__
 Bug fixes
 * [6 - Fix Unique Key Bug in PlayerListScores](https://github.com/coolcoastcat/coronivia/issues/6)
 * [21 - Mobile experience has multiple UI issues](https://github.com/coolcoastcat/coronivia/issues/21)
@@ -11,8 +37,6 @@ Enhancements
 * Added question above the submitted answer
 * Added detection of dev vs prod environments for using different SERVER_URIs
 
-Known Issues
-* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
 
 __v0.0.5__
 Bug fixes

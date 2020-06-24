@@ -1,12 +1,11 @@
 import React from 'react';
 import { Redirect } from 'react-router';
-import './forms.css';
 import _ from 'lodash';
 
 import InputLabel from '@material-ui/core/InputLabel';
 import MenuItem from '@material-ui/core/MenuItem';
-import FormHelperText from '@material-ui/core/FormHelperText';
 import FormControl from '@material-ui/core/FormControl';
+import FormControlLabel from '@material-ui/core/FormControlLabel';
 import Select from '@material-ui/core/Select';
 import Box from '@material-ui/core/Box';
 import Button from '@material-ui/core/Button';
@@ -14,6 +13,14 @@ import Paper from '@material-ui/core/Paper';
 import Grid from '@material-ui/core/Grid';
 import TextField from '@material-ui/core/TextField';
 import { green } from '@material-ui/core/colors';
+import ExpansionPanel from '@material-ui/core/ExpansionPanel';
+import ExpansionPanelSummary from '@material-ui/core/ExpansionPanelSummary';
+import ExpansionPanelDetails from '@material-ui/core/ExpansionPanelDetails';
+import Typography from '@material-ui/core/Typography';
+import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
+import ListItemText from '@material-ui/core/ListItemText';
+import Checkbox from '@material-ui/core/Checkbox';
+import Input from '@material-ui/core/Input';
 import {
   withStyles,
   makeStyles,
@@ -23,6 +30,7 @@ const useStyles = makeStyles((theme) => ({
   formControl: {
     margin: theme.spacing(1),
     minWidth: 170,
+    maxWidth: 250
   },
   selectEmpty: {
     marginTop: theme.spacing(2),
@@ -49,8 +57,29 @@ const useStyles = makeStyles((theme) => ({
   },
   borderIt: {
     width: '50%'
+  },
+  heading: {
+    
+  },
+  panel: {
+    maxWidth: 300,
+    textAlign: 'center'
+  },
+  fill: {
+    flexGrow: 1
   }
 }));
+
+const GreenCheckbox = withStyles({
+  root: {
+    color: green[400],
+    '&$checked': {
+      color: green[600],
+    },
+  },
+  checked: {},
+})((props) => <Checkbox color="default" {...props} />);
+
 
 const ValidationTextField = withStyles({
   root: {
@@ -69,11 +98,38 @@ const ValidationTextField = withStyles({
   },
 })(TextField);
 
+const ITEM_HEIGHT = 48;
+const ITEM_PADDING_TOP = 8;
+const MenuProps = {
+  PaperProps: {
+    style: {
+      maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
+      width: 250,
+    },
+  },
+};
+
+const categoryList = [
+                      { category_id: 9, category: 'General Knowledge' },
+                      { category_id: 10, category: 'Entertainment' },
+                      { category_id: 17, category: 'Science' },
+                      { category_id: 20, category: 'Art & Mythology' },
+                      { category_id: 21, category: 'Sports' },
+                      { category_id: 22, category: 'Geography' },
+                      { category_id: 23, category: 'History' },
+                      { category_id: 24, category: 'Politics' },
+                      { category_id: 31, category: 'Animation & Manga' },
+                      { category_id: 15, category: 'Video Games' }
+                      ];
+const selectedCategoryArray = ['General Knowledge','Entertainment','Science','Art & Mythology', 
+                          'Sports', 'Geography', 'History','Politics'];
+const selectedCategoryIDs = [9,10,17,20,21,22,23,24];
+
 export function CreateGameForm(props) {
     const classes = useStyles();
 
     const MAX_ROUNDS = 10;
-    const MAX_QUESTIONS_PER_ROUND = 50;
+    const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
     const [rounds, setRounds] = React.useState(1);
     const [difficulty, setDifficulty] = React.useState('any');
@@ -81,22 +137,45 @@ export function CreateGameForm(props) {
     const [owner, setOwner] = React.useState('');
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
+    const [categories, setCategories] = React.useState(selectedCategoryArray);
+    const [category_ids, setCategoryIDs] = React.useState(selectedCategoryIDs);
+    const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
+
+    const handlePauseChange = (event) => {
+      console.debug("received event: %o",event.target.checked);
+      setPauseBetweenRounds(event.target.checked);
+    };
+
+    const handleCategoriesChange = (event) => {
+      const catArray = event.target.value;
+      console.debug ('Received cats: '+catArray);
+      let catIDArray = [];
+      catArray.forEach(category=>{
+        categoryList.forEach((cat)=>{
+          if(cat.category === category){
+            catIDArray.push(cat.category_id);
+          }
+        });
+      });
   
-    const createGameResponse = '';
+      setCategories(catArray);
+      setCategoryIDs(catIDArray);
+    };
+  
 
     function handleRoundsChange(event) {
       setRounds(event.target.value);
-      console.log('set rounds to: '+event.target.value);
+      console.debug('set rounds to: '+event.target.value);
     }
     
     function handleQuestionsChange(event) {
       setQuestions(event.target.value);
-      console.log('set questions to: '+event.target.value);
+      console.debug('set questions to: '+event.target.value);
     }
   
     function handleDifficultyChange(event) {
       setDifficulty(event.target.value);
-      console.log('set difficulty to: '+event.target.value);
+      console.debug('set difficulty to: '+event.target.value);
     }
   
     function handleOwnerChange(event) {
@@ -113,9 +192,10 @@ export function CreateGameForm(props) {
         questions: questions,
         rounds: rounds,
         difficulty: difficulty,
-        owner: owner
+        owner: owner,
+        categories: category_ids,
+        pauseBetweenRounds: pauseBetweenRounds
       };
-      
       props.handleFormSubmit(submission);  
       event.preventDefault();
     }
@@ -131,7 +211,7 @@ export function CreateGameForm(props) {
         <Paper>
         <Box  p={2}>
         <form onSubmit={handleSubmit}>
-        <Grid  container>
+        <Grid   justify="center" container>
         <Grid item xs={12}>
             <ValidationTextField
               className={classes.margin}
@@ -174,20 +254,70 @@ export function CreateGameForm(props) {
             </FormControl>
           </Grid>
 
-          <Grid item xs={12}>
-            <FormControl className={classes.formControl}>
-            <InputLabel id="difficulty-select-label">Question Difficulty</InputLabel>
-            <Select
-              labelId="difficulty-select-label"
-              id="difficulty-select"
-              value={difficulty}
-              onChange={handleDifficultyChange}
-            >
-              { DIFFICULTIES.map(difficulty => <MenuItem key={difficulty} value={difficulty}>{difficulty}</MenuItem>) }  
-            </Select>
-            </FormControl>
-          </Grid>
+    
 
+          <Grid  className={classes.panel} item xs={12}>
+           <ExpansionPanel>
+            <ExpansionPanelSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="panel1a-content"
+              id="panel1a-header"
+            >
+              <Typography className={classes.heading}>Advanced Options</Typography>
+            </ExpansionPanelSummary>
+            <ExpansionPanelDetails>
+            <Grid container>
+
+              <Grid item xs={12}>
+                <FormControl className={classes.formControl}>
+                <InputLabel id="difficulty-select-label">Question Difficulty</InputLabel>
+                <Select
+                  labelId="difficulty-select-label"
+                  id="difficulty-select"
+                  value={difficulty}
+                  onChange={handleDifficultyChange}
+                >
+                  { DIFFICULTIES.map(difficulty => <MenuItem key={difficulty} value={difficulty}>{difficulty}</MenuItem>) }  
+                </Select>
+                </FormControl>
+              </Grid>
+            
+              <Grid className={classes.formControl}  item sm={12}>
+                  <FormControl required className={classes.formControl}>
+                    <InputLabel id="demo-mutiple-checkbox-label">Categories</InputLabel>
+                    <Select
+                      labelId="categories-label"
+                      id="categories-mutiple-checkbox"
+                      multiple
+                      value={categories}
+                      onChange={handleCategoriesChange}
+                      input={<Input />}
+                      renderValue={(selected) => selected.join(', ')}
+                      MenuProps={MenuProps}
+                    >
+                      {categoryList.map((tmpCat) => (
+                        <MenuItem key={tmpCat.category_id} value={tmpCat.category}>
+                          <Checkbox checked={categories.indexOf(tmpCat.category) > -1} />
+                          <ListItemText primary={tmpCat.category} />
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Grid>
+    
+              <Grid item sm={12}>
+                  <FormControlLabel
+              control={<GreenCheckbox checked={pauseBetweenRounds} onChange={handlePauseChange} name="pauseBetweenRounds" />}
+              label="Pause beteween rounds"
+              />
+               
+              </Grid>
+      
+            </Grid>
+            </ExpansionPanelDetails>
+           </ExpansionPanel>
+          </Grid>
+           
           <Grid item xs={12}>
           <Box p={1}>
                 <Button onClick={() => {}}
@@ -212,7 +342,7 @@ export function CreateGameForm(props) {
 
   export function JoinGameForm(props){
     const classes = useStyles();
-    const [player, setPlayer] = React.useState('');
+    const [player, setPlayer] = React.useState((props.player) ? props.player : '');
     const [playerNameHelper, setPlayerHelper] = React.useState('');
     const [joinRoomHelper, setJoinRoomHelper] = React.useState('');
     const [roomname,setRoomname] = React.useState((props.roomname) ? props.roomname : '');
@@ -238,7 +368,7 @@ export function CreateGameForm(props) {
     }
   
     function handleSubmit(event) {
-      if(roomname.length == 4){
+      if(roomname.length === 4){
       console.log('A Player: '+player+ 'is joining roomname: ' + roomname);
         var submission = {
           roomname: roomname,
