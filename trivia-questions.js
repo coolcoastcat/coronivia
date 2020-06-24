@@ -54,10 +54,7 @@ console.log("Getting the first easy politics question: %o",allQuestions.categori
   @return Shuffled array
 */
 function shuffle(array) {
-<<<<<<< HEAD
-=======
     if(!array || array.length === 0) { return [];}
->>>>>>> 414f001f5ba0356a1c03e039b13d9c708774ab72
     var currentIndex = array.length, temporaryValue, randomIndex;
   
     // While there remain elements to shuffle...
