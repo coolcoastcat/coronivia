@@ -5,8 +5,22 @@ import QuestionDialog from "./QuestionDialog";
 import WinnerList from "./WinnerList";
 import Box from '@material-ui/core/Box';
 import { Redirect } from "react-router-dom";
+import Button from '@material-ui/core/Button';
+import { withStyles } from '@material-ui/core/styles';
 
-export class GamePlay extends React.Component{
+const styles = theme => ({
+    colorfulButton: {
+      background: 'linear-gradient(45deg, #32a852 30%, #d8e038 90%)',
+      border: 0,
+      borderRadius: 3,
+      boxShadow: '0 3px 5px 2px rgba(245, 250, 155, .3)',
+      color: 'white',
+      height: 48,
+      padding: '0 30px',
+    }
+  });
+
+class GamePlay extends React.Component{
     constructor(props){
         super(props)
         console.debug("GamePlay constructed with props: %o",props);
@@ -23,7 +37,8 @@ export class GamePlay extends React.Component{
             countdownData: null,
             leaveGame: false,
             interval: null,
-            showSeconds: false
+            showSeconds: false,
+            gameEnded: false
         }
         this.winningPlayerArray = [];
         this.setUpEventHandlers();
@@ -43,10 +58,11 @@ export class GamePlay extends React.Component{
         });
 
 
-        this.socket.on('round-end',(playerArray) =>{
-            this.setState({players: playerArray})
+        this.socket.on('round-end',(data) =>{
+            this.setState({players: data.playerArray});
+            this.setState({gameEnded: data.gameEnded});
            // this.playerListElement.current.updatePlayers(this.state.players); // Update the child
-            console.debug('event: round-end with data: %o',playerArray);
+            console.debug('event: round-end with data: %o',data);
           });
 
      
@@ -118,29 +134,46 @@ export class GamePlay extends React.Component{
     }
 
     /* Handles if a player leaves the game. Passed to QuestionDialog */
-    handleLeaveGame = ()=>{ 
-/*  If a player is removed, she no longer appears in the list at the end. The players will get removed at end game in any case      
-    this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
-            console.log('Leaving game result: %o',data);
-            // Redirect to join page
-            this.setState({leaveGame:true});    
-            this.socket.close();
-        });
-*/  
+    handleLeaveGame = ()=>{  
         this.setState({leaveGame:true});    
         this.socket.close();
-    }
+    };
+
+    /* Handles when an owner clicks on the 'Next Round' button */
+    handleNextRound = ()=>{ 
+        this.socket.emit('continue-round',
+        {ownerID: this.gameConfig.ownerID, roomname: this.gameConfig.roomname},
+        (data)=>{
+            if(data.success){
+              console.log("Server acknowledged start-game event");
+            } 
+              else console.error("Server returned error: "+data.error);
+            });
+    };
 
     render(){
+        const { classes } = this.props;
+
         console.debug("DEBUG GamePlay render -> showScores:"+this.state.showScores+ " showQuestion: "+
             this.state.showQuestion+" showEndgame: "+this.state.showEndgame+ " leaveGame: "+this.state.leaveGame);
 
        if(this.state.leaveGame){
             console.log("GamePlay player "+this.gameConfig.player+" is leaving game "+this.gameConfig.roomname);
             return <Redirect to='/' />
-          }
+        }
 
-    
+        let pauseBetweenRoundContent = '';
+        console.log("this.state.gameEnded: "+this.state.gameEnded+ " this.gameConfig.pauseBetweenRounds: %o",this.gameConfig.pauseBetweenRounds);
+        if(this.gameConfig.pauseBetweenRounds && !this.state.endGame && !this.state.countdownData){
+            pauseBetweenRoundContent = (!this.gameConfig.ownerID) ? <Box m={2}>Waiting for room owner to continue to the next round...</Box>:
+                                                                        <Box m={2}> 
+                                                                            <Button type="submit" size="small" variant="contained" 
+                                                                            className={classes.colorfulButton}  
+                                                                            onClick={this.handleNextRound}>Play Next Round
+                                                                            </Button>
+                                                                        </Box>;
+        }
+
         if(this.state.showScores) {
             return(
                 <Box>
@@ -156,6 +189,7 @@ export class GamePlay extends React.Component{
                         <PlayerListScores players={this.state.players} 
                                         ref={this.playerListElement}
                                         showScore={true} />
+                        {pauseBetweenRoundContent}
                     </QuestionDialog>
                 </Box> 
             );
@@ -221,3 +255,4 @@ export class GamePlay extends React.Component{
     };
 }
 
+export default withStyles(styles)(GamePlay);

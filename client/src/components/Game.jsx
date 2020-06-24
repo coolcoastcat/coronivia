@@ -3,8 +3,7 @@ import PropTypes from 'prop-types';
 import { withStyles } from '@material-ui/core/styles';
 import { Redirect } from "react-router-dom";
 import { GameInfo } from "./GameInfo";
-import { GamePlay } from "./GamePlay";
-import { JoinGameForm } from "./forms";
+import GamePlay from "./GamePlay";
 import PlayerListScores from './PlayerListScores';
 import { confirmAlert } from 'react-confirm-alert'; // Import
 import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css

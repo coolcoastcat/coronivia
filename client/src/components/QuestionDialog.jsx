@@ -55,7 +55,7 @@ export default function QuestionDialog(props) {
           </DialogContentText>
         }
           <Box style={{ fontFamily: 'sans-serif'}}>
-          {(props.children) ? props.children : "Thanks for joining in! Your screen will refresh on the next question."}
+          {(props.children) ? props.children : "Thanks for playing! Awaiting the next question."}
           </Box>
         </DialogContent>
         <DialogActions>

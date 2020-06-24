@@ -96,6 +96,7 @@ function handleNewSocketConnection(socket){
                 owner: owner,
                 player: owner,
                 ownerID: game.ownerID,
+                pauseBetweenRounds: game.pauseBetweenRounds,
                 players: [] });
      });
 
@@ -133,6 +134,8 @@ function handleNewSocketConnection(socket){
                           roomname: game.roomName, 
                           owner: game.owner,
                           gameStatus: game.gameStatus,
+                          ownerID: (data.player === game.owner)? game.ownerID : null,
+                          pauseBetweenRounds: game.pauseBetweenRounds,
                           players: game.getPlayerInfo()
       }
       console.log("Sending gameConfig: %o",gameConfig);
@@ -289,6 +292,36 @@ function handleNewSocketConnection(socket){
     }
   
   });
+
+
+   /* Handles the owner clicking the next round button. Starts the next round
+    @param data.ownerID The owner id
+    @param data.roomname The four character game room number
+
+  */
+ socket.on('continue-round',(data,callback) =>{
+ // Validate room and owner id
+ result = validateParams(["roomname","ownerID"],data);
+ if(!result.success){
+   console.error(result.messages)  
+   callback({ success: false, error: result.messages});
+   return;
+ }
+ 
+ if(!isGameOwner(data.roomname, data.ownerID)){
+   console.error("roomname not found OR ownerID did not match with the room");
+   callback({ success: false, error: 'no such roomname with ownerID found'});
+   return;
+ }
+ gameRoom = gameRoomArray[data.roomname];
+ console.log('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
+ 
+gameRoom.startRound(gameRoom); // Start the next round
+
+ callback({success: true, message: 'Game continued.'});
+ });
+
+
 
   ///////// Utility Socket Message Handlers /////////
    socket.on('error',(data) => {
@@ -676,17 +709,24 @@ class GameRoom{
 }
 
   /* Ends the current round and sends player-change data, followed by a show-scores timed message 
-    Increments the currentRoundNumber by 1
+    Increments the currentRoundNumber by 1. If pauseBetweenRounds has been set, the client knows to display a button
     @emits round-end With player info to update and show scores
   */
   endRound(){
-    console.log("Ending Round "+this.currentRoundNumber);
-    io.to(this.roomName).emit('round-end',this.getPlayerInfo());
+    // Check if game ended 
     this.currentRoundNumber++;
-    let roundMessage = (this.rounds == this.currentRoundNumber)?'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
+    let gameEnded = (this.rounds === this.currentRoundNumber)? true : false;
+
+    console.log("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
+
+    io.to(this.roomName).emit('round-end',{playerArray: this.getPlayerInfo(), gameEnded:gameEnded});
+    
+    let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
     
     // createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
-    createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,this.startRound);
+    let callback = (!this.pauseBetweenRounds || gameEnded ) ? this.startRound : ()=>console.log("Waiting for Owner to start the next round");
+
+    createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,callback);
   }
 
   /* Tells the clients the game is over. Emits a game ending event and closes all the sockets
