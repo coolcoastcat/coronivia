@@ -319,24 +319,6 @@ export function CreateGameForm(props) {
           </Grid>
            
           <Grid item xs={12}>
-           <ExpansionPanel className={classes.panel}>
-            <ExpansionPanelSummary
-              expandIcon={<ExpandMoreIcon />}
-              aria-controls="panel1a-content"
-              id="panel1a-header"
-            >
-              <Typography className={classes.heading}>Advanced Options</Typography>
-            </ExpansionPanelSummary>
-            <ExpansionPanelDetails>
-              <Typography>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse malesuada lacus ex,
-                sit amet blandit leo lobortis eget.
-              </Typography>
-            </ExpansionPanelDetails>
-           </ExpansionPanel>
-          </Grid>
-
-          <Grid item xs={12}>
           <Box p={1}>
                 <Button onClick={() => {}}
                   type="submit" 
