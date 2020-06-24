@@ -1,5 +1,4 @@
 import React from "react";
-import "./game-info.css";
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import { green } from '@material-ui/core/colors';
@@ -10,7 +9,7 @@ const content = {border: '1px solid lightGray', justify:"flex-start" ,fontSize:'
 export class GameInfo extends React.Component{
     constructor(props){
         super(props)
-        console.log("GameInfo constructed with props: %o",props);
+        console.debug("GameInfo constructed with props: %o",props);
         this.gameConfig = props.gameConfig;
         this.MAX_NAME_LENGTH = 10;
     }
@@ -28,7 +27,7 @@ export class GameInfo extends React.Component{
 
     render(){
         return(
-            <Grid container>
+            <Grid   justify="center" container>
                 <Grid item xs={12}>
                 GAME INFO
                 </Grid>
@@ -80,6 +79,17 @@ export class GameInfo extends React.Component{
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
                     <Box p={1}>
+                    Pause Between Rounds:
+                    </Box>
+                </Grid>
+                <Grid   style={content}   container item xs={6}>
+                    <Box p={1}>
+                    {this.gameConfig.pauseBetweenRounds?'Yes':'No'}
+                    </Box>
+                </Grid>
+
+                <Grid justify='flex-end'  style={label}  container item xs={6}>
+                    <Box p={1}>
                     Room Name:
                     </Box>
                 </Grid>
@@ -96,7 +106,7 @@ export class GameInfo extends React.Component{
                     Owner:
                     </Box>
                 </Grid>
-                <Grid   style={content}   container item xs={6}>
+                <Grid  style={content}   container item xs={6}>
                     <Box p={1}>
                     {this.truncatePlayerName(this.gameConfig.owner)}
                     </Box>

@@ -5,32 +5,34 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
+import Box from '@material-ui/core/Box';
+import Paper from '@material-ui/core/Paper';
 
 export default function AlertDialog(props) {
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(true);
 
   const handleClickOpen = () => {
     setOpen(true);
   };
 
   const handleCancel = () => {
+    if (props.cancelCallback && typeof props.cancelCallback === 'function') {
+      props.cancelCallback();
+  }
     setOpen(false);
   };
 
   const handleContinue = () => {
-    if (typeof props.callback === 'function') {
+    if (props.callback && typeof props.callback === 'function') {
         props.callback();
     }
     setOpen(false);
   };
 
-
-
+  console.log("should be returning a dialog...");
   return (
-    <span>
-      <Button variant="contained"  color="default" onClick={handleClickOpen}>
-       {props.children}
-      </Button>
+    <Box>
+      <Paper>
       <Dialog
         open={open}
         onClose={handleCancel}
@@ -44,14 +46,18 @@ export default function AlertDialog(props) {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleContinue} color="primary">
+          
+          <Button onClick={handleContinue} variant="outlined" >
             {props.buttonContinueText}
           </Button>
+          { props.buttonCancelText && 
           <Button onClick={handleCancel} color="primary" autoFocus>
             {props.buttonCancelText}
           </Button>
+          }
         </DialogActions>
       </Dialog>
-    </span>
+      </Paper>
+    </Box>
   );
 }

@@ -1,9 +1,7 @@
 import React from "react";
-import "./player.css";
 import { withStyles } from '@material-ui/core/styles';
 import PropTypes from 'prop-types';
 import Grid from '@material-ui/core/Grid';
-import Box from '@material-ui/core/Box';
 import { green } from '@material-ui/core/colors';
 
 //const label = {color: green['600'], justify: 'flex-end', fontWeight: 600,fontSize:'16px'};
@@ -39,13 +37,13 @@ const styles = theme => ({
 class PlayerListScores extends React.Component{
     constructor(props){
         super(props)
-        console.log("PlayerList constructed with props: %o",props);
+        console.debug("PlayerList constructed with props: %o",props);
         this.player = props.thisPlayer;
         this.state = {
             players: (props.players) ? props.players : null,
             showScore: props.showScore
         };
-        this.MAX_NAME_LENGTH = 10;
+        this.MAX_NAME_LENGTH = 11;
     }
 
     truncatePlayerName(str) {
@@ -65,25 +63,25 @@ class PlayerListScores extends React.Component{
     */
     updatePlayers(playerArray){
         this.setState({players: playerArray});
-        console.log("PlayersList received players update %o",playerArray);
+        console.debug("PlayersList received players update %o",playerArray);
     }
 
     /* alternating row styling */
     getClass(index){
         const { classes } = this.props;
-        return (index %2 == 0 )  ? classes.content : classes.contentGray;
+        return (index %2 === 0 )  ? classes.content : classes.contentGray;
     }
 
     render(){
         let playerItems = '';
         const { classes } = this.props;
-        console.log("DEBUG: Players array: %o",this.state.players)
+        console.debug("DEBUG: Players array: %o",this.state.players)
         if(this.state.players){
             playerItems = this.state.players.map((player,index) => {
                 let connectedStyle = (!player.connected)? classes.disconnected : classes.none;
                 return([
-                    <Grid className={this.getClass(index)} key={player.name} xs={4} item><span className={connectedStyle}>{ this.truncatePlayerName(player.name) }</span>{ player.name === this.player && <span> (you) </span> }</Grid>,
-                    <Grid className={this.getClass(index)}  key={player.score} xs={8} item>{(this.state.showScore)?player.score : '' }</Grid>
+                    <Grid className={this.getClass(index)} key={player.name} xs={8} item><span className={connectedStyle}>{ this.truncatePlayerName(player.name) }</span>{ player.name === this.player && <span> (you) </span> }</Grid>,
+                    <Grid className={this.getClass(index)}  key={player.score} xs={4} item>{(this.state.showScore)?player.score : '' }</Grid>
                     ])
                 }
                 ) 
@@ -91,8 +89,8 @@ class PlayerListScores extends React.Component{
         
         return(
            <Grid container>
-                <Grid className={classes.label}  key={'title'} xs={4} item>Players</Grid>
-                <Grid className={classes.label}  key={'score'} xs={8} item>{(this.state.showScore)? 'Score': ''}</Grid> 
+                <Grid className={classes.label}  key={'title'} xs={8} item>Players</Grid>
+                <Grid className={classes.label}  key={'score'} xs={4} item>{(this.state.showScore)? 'Score': ''}</Grid> 
                 {playerItems}
             </Grid>
         );

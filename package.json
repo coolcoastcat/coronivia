@@ -13,7 +13,7 @@
     "client": "cd client && yarn start",
     "server": "nodemon coronivia-server.js",
     "package": "cd client && yarn build && cd .. && cp -r client/build/* ./public",
-    "dev": "node trivia-database.js && concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
+    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
   },
   "dependencies": {
     "body-parser": "^1.18.3",
