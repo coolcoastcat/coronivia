@@ -685,7 +685,7 @@ class GameRoom{
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
     let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
-    console.log("Sending question: %o",data);
+    console.debug("Sending question: %o",data);
     
     io.to(this.roomName).emit('question',data);
 
@@ -723,8 +723,7 @@ class GameRoom{
     
     let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
     
-    // createTimerNoCountdown(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,this,this.startRound);
-    let callback = (!this.pauseBetweenRounds || gameEnded ) ? this.startRound : ()=>console.log("Waiting for Owner to start the next round");
+    let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>console.log("Waiting for Owner to start the next round");
 
     createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,callback);
   }
@@ -746,6 +745,13 @@ class GameRoom{
     console.log('Calling external function to delete game');
     endGame(gameRoom.roomName, gameRoom.ownerID);
   
+}
+
+/* Determines if the owner still connected 
+  @return True if absent, False if present and connected
+*/
+isOwnerAbsent(){
+  return (!this.getPlayer(this.owner) || !(this.getPlayer(this.owner)).socket.connected) ? true : false;
 }
 
 /*

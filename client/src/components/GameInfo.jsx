@@ -79,6 +79,17 @@ export class GameInfo extends React.Component{
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
                     <Box p={1}>
+                    Pause Between Rounds:
+                    </Box>
+                </Grid>
+                <Grid   style={content}   container item xs={6}>
+                    <Box p={1}>
+                    {this.gameConfig.pauseBetweenRounds?'Yes':'No'}
+                    </Box>
+                </Grid>
+
+                <Grid justify='flex-end'  style={label}  container item xs={6}>
+                    <Box p={1}>
                     Room Name:
                     </Box>
                 </Grid>

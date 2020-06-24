@@ -16,6 +16,9 @@ export default function AlertDialog(props) {
   };
 
   const handleCancel = () => {
+    if (props.cancelCallback && typeof props.cancelCallback === 'function') {
+      props.cancelCallback();
+  }
     setOpen(false);
   };
 

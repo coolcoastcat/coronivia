@@ -5,8 +5,7 @@ import { Redirect } from "react-router-dom";
 import { GameInfo } from "./GameInfo";
 import GamePlay from "./GamePlay";
 import PlayerListScores from './PlayerListScores';
-import { confirmAlert } from 'react-confirm-alert'; // Import
-import 'react-confirm-alert/src/react-confirm-alert.css'; // Import css
+import AlertDialog from './AlertDialog';
 import Paper from '@material-ui/core/Paper';
 import Button from '@material-ui/core/Button';
 import AssignmentTwoToneIcon from '@material-ui/icons/AssignmentTwoTone';
@@ -15,10 +14,7 @@ import { green } from '@material-ui/core/colors';
 import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
-
-import io from "socket.io-client/lib";
 import config  from "./config";
-import QuestionDialog from "./QuestionDialog";
 
 let SERVER_URI = null;
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -83,6 +79,7 @@ class Game extends React.Component{
         serverConnection: 'disconnected',
         isLoading: true,
         error: null,
+        errorMsg: null,
         copied: false,
         confirmCancel: false,
         confirmLeave: false
@@ -90,8 +87,7 @@ class Game extends React.Component{
       this.socket = props.socket;
       this.setUpEventHandlers();
       this.playerListElement = React.createRef();
-      this.handleStartGame = this.handleStartGame.bind(this);
-      this.handleCancelGame = this.handleCancelGame.bind(this);
+
     }
   
      /* Clean up once the game is unmounted */
@@ -180,7 +176,7 @@ class Game extends React.Component{
   
   
     /* Handles the button click to start the game! */
-    handleStartGame(){
+    handleStartGame = ()=>{
     console.debug("DEBUG handleStartGame() called with object this: %o",this);
      this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
               (data)=>{
@@ -192,45 +188,15 @@ class Game extends React.Component{
     }
   
     /*Called when game is cancelled or naturally ends*/
-    handleEndGame(){
-      console.debug("handleEndGame() called");
-      confirmAlert({
-        customUI: ({ onClose }) => {
-          this.socket.close();
-          return (
-            <div className='score-wrapper'>
-              <div className='score-dialog'>
-                <h2>Game Ended - Final Scores</h2>
-                <p><Button onClick={() => {                  
-                    this.setState({leaveGame: true});
-                    onClose();}}
-                    type="button" 
-                    buttonSize="btn--small"
-                    buttonStyle='btn--success--solid'>Close</Button>
-                </p>
-                <p>
-                <PlayerListScores thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />
-                </p>
-              </div>
-            </div>
-          );
-        }
-      });
-  
+    handleEndGame = ()=>{
+      this.setState({leaveGame:false, confirmLeave: false, gameStatus:'ENDED'});
+      this.socket.close();
+      console.debug("handleEndGame(): displaying final scores and closed socket");
     }
   
-    handleError(errorMsg){
+    handleError = (errorMsg)=>{
+      this.setState({errorMsg: errorMsg, error: true});
       console.error("handleError(): "+errorMsg);
-      confirmAlert({
-        title: getErrorPhrase(),
-        message: errorMsg,
-        buttons: [
-          {
-            label: 'Ok',
-            onClick: () => {}
-          }
-        ]
-      });
     }
     
     /* Handles the button click to start the game! */
@@ -240,8 +206,8 @@ class Game extends React.Component{
         console.debug("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
         console.debug('Cancel game result: %o',data);
-        if(!data.success){ this.handleError(data.error); }
-        // Server should kick everyone out and display final score
+        if(!data.success){ this.handleError(data.error); } 
+       
         });
     }
   
@@ -250,7 +216,7 @@ class Game extends React.Component{
    
         this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
         console.debug('Player '+this.gameConfig.player+' leaving game result: %o',data);
-        this.setState({leaveGame:true, confirmLeave: false});
+        this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
         this.socket.close();
         });
     }
@@ -277,26 +243,28 @@ class Game extends React.Component{
         return <Redirect to='/' />
       }
 
+      
+
       if(this.state.confirmCancel){
-        return <QuestionDialog  showQuestion={true} 
-                                timerText={this.state.timerText} 
-                                dialogTitle={'Cancel the game?'}
-                                leaveGame={true} 
-                                stayCallback={this.cancelLeave}
-                                leaveCallback={this.handleCancelGame}>
-                                Do you really want to cancel the game? This will end the game for all players.
-                </QuestionDialog>;
+        return <AlertDialog 
+                  buttonContinueText={'Cancel Game :('} 
+                  buttonCancelText={'Play On!'}
+                  dialogText={'Do you really want to cancel the game? This will end the game for all players.'} 
+                  dialogTitle={'Cancel the game?'} 
+                  callback={this.handleCancelGame}
+                  cancelCallback={this.cancelLeave}>
+               </AlertDialog>;
       }
 
       if(this.state.confirmLeave){
-        return <QuestionDialog  showQuestion={true} 
-                                timerText={this.state.timerText} 
-                                dialogTitle={'Leave the game?'}
-                                leaveGame={true} 
-                                stayCallback={this.cancelLeave}
-                                leaveCallback={this.handleLeaveGame}>
-                                Do you really want to leave the game?
-                </QuestionDialog>;
+        return <AlertDialog 
+                  buttonContinueText={'Leave :('} 
+                  buttonCancelText={'Play On!'}
+                  dialogText={'Do you really want to leave the game?'} 
+                  dialogTitle={'Leave the game?'} 
+                  callback={this.handleLeaveGame}
+                  cancelCallback={this.cancelLeave}>
+               </AlertDialog>;
       }
       
       let headerMessage = 'Welcome to Game Room: '+this.gameConfig.roomname+'!';
@@ -313,11 +281,6 @@ class Game extends React.Component{
                   type="button" 
                   variant="outlined" 
                   >Cancel Game</Button>
-          {/* 
-        <AlertDialog buttonContinueText={'Start'} buttonCancelText={'Wait some more'}
-                     dialogText={'Click start to beging the game.'} 
-                     dialogTitle={'Starting the Game'} callback={this.handleStartGame}>
-        Click Start to begin!</AlertDialog>*/}
         </Box>;
  
   
@@ -325,8 +288,14 @@ class Game extends React.Component{
       const gameURL = getBaseURL()+ 'join?roomname=' +this.gameConfig.roomname;
       const clipboardIcon = (this.state.copied)? <AssignmentTurnedInTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} /> :<AssignmentTwoToneIcon  onClick={() => this.handleCopyLink()} style={{ color: green[500] }} />;
   
-      if (this.state.error) { // REPLACE WITH DIALOG
-        return <p>{ this.state.error }</p>;
+      if (this.state.error) { 
+        return ( 
+          <AlertDialog buttonContinueText={'Ok'} 
+            dialogText={this.state.joinErrorMsg} 
+            dialogTitle={getErrorPhrase()}
+            callback={()=>this.setState({error:false})} >
+          </AlertDialog>
+        );
       }
   
       switch(this.state.gameStatus){
@@ -373,7 +342,17 @@ class Game extends React.Component{
         );
   
         case 'ENDED':
-          return(<PlayerListScores showScore={true}  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} />);
+          goTo({page: '/'},"Coronivia","/");
+          return(
+            <Paper>
+              <Box style={{fontSize:'30px'}} m={2}>The game was cancelled. Final scores:</Box>
+              <Box p={2}><PlayerListScores showScore={true}  thisPlayer={this.gameConfig.player} players={this.state.players} ref={this.playerListElement} /></Box>
+              <Box p={2}>
+                <Button type="submit" size="small" variant="contained" className={classes.colorfulButton}  onClick={()=>this.setState({leaveGame:true})}>
+              The End</Button>
+              </Box>
+            </Paper>
+        );
   
         default:
           return(<div>Really shouldn't get here</div>);
@@ -386,3 +365,11 @@ class Game extends React.Component{
   };
 
 export default withStyles(styles)(Game);
+
+function goTo(page, title, url) {
+  if ("undefined" !== typeof window.history.pushState) {
+    window.history.pushState({page: page}, title, url);
+  } else {
+    window.location.assign(url);
+  }
+}
