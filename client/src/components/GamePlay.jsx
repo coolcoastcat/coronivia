@@ -44,7 +44,11 @@ class GamePlay extends React.Component{
         this.setUpEventHandlers();
         this.playerListElement = React.createRef(); // Allow sending updates to child
         this.questionElement = React.createRef(); // Allow updating question in child
-        this.handleLeaveGame = this.handleLeaveGame.bind(this);
+    }
+
+    /* Clean up the socket */
+    componentWillUnmount() {
+        // this.socket.close();
     }
     
     /* Sets up the event handlers for playing the game */
@@ -135,8 +139,11 @@ class GamePlay extends React.Component{
 
     /* Handles if a player leaves the game. Passed to QuestionDialog */
     handleLeaveGame = ()=>{  
-        this.setState({leaveGame:true});    
-        this.socket.close();
+        this.setState({leaveGame:true});
+        this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
+            console.debug('Player '+this.gameConfig.player+' leaving game result: %o',data);
+            this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
+        });
     };
 
     /* Handles when an owner clicks on the 'Next Round' button */
@@ -211,6 +218,7 @@ class GamePlay extends React.Component{
                         <Question gameRoomName={this.gameConfig.roomname} 
                                     thisPlayer={this.gameConfig.player} 
                                     socket={this.socket} 
+                                    questionFive={this.gameConfig.questionFive}
                                     ref={this.questionElement} /> 
                     </QuestionDialog>
                 </Box> 

@@ -117,13 +117,7 @@ handleFormSubmit(createGameData){
   //       and all games flushed. If so, message should be shown and game should be recreated.
   if(!this.state.created){
     // Create the game on the server
-    this.socket.emit('create-game',{rounds:createGameData.rounds,
-                  questions:createGameData.questions,
-                  difficulty:createGameData.difficulty, 
-                  owner:createGameData.owner,
-                  categories: createGameData.categories,
-                  pauseBetweenRounds: createGameData.pauseBetweenRounds}
-                  , (createGameResp)=>{ // Process the server response
+    this.socket.emit('create-game',createGameData, (createGameResp)=>{ // Process the server response
                     console.debug("create-game API response: %o",createGameResp);
                     
                     this.gameConfig = createGameResp;

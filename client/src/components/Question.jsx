@@ -11,6 +11,30 @@ import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import renderHTML from 'react-render-html';
 
+const questionFiveTitles = [
+    "No idea.",
+    "No clue.",
+    "Say what?",
+    "Duuuuude, how should I know?😎",
+    "Five! Five! Five!",
+    "I'm going to close my my eyes and pick...",
+    "Random answer please.",
+    "These questions are friggin' hard!",
+    "Who picked these questions?",
+    "I'll take Five for $500, Alex...",
+    "¯\_(ツ)_/¯",
+    "Roll the bones!",
+    "I got nothing.",
+    "Bubkes, is my answer.",
+    "I PICK...FIVE!!!!",
+    "Yeaaaaaaahhh, I'm out."
+]
+
+  /* Get a random funny error phrase to prefix dialogs */
+  function getQuestionFiveTitle(){
+    return questionFiveTitles[Math.floor(Math.random() * questionFiveTitles.length)];
+    }
+
 const styles = theme => ({
     root: {
       background: 'linear-gradient(45deg, #32a852 30%, #d8e038 90%)',
@@ -89,9 +113,13 @@ class Question extends React.Component {
             questionObject: null, // contains answers[], category, type, difficulty, question
             currentRoundNumber: 0,
             questionNumber: 0,
-            totalQuestions: 0
+            totalQuestions: 0,
+            disabled: true
 
         };
+        this.questionFive = props.questionFive;
+        this.randomAnswer = null;
+        this.randomAnswerLabel = null;
         this.socket = props.socket;
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmitAnswer = this.handleSubmitAnswer.bind(this); 
@@ -105,12 +133,14 @@ class Question extends React.Component {
         @param questionJSON.currentRoundNumber The current round number
     */
     setQuestion(questionJSON){
+
         this.setState({showAnswer: false, 
                         submittedAnswer: false, 
                         playerAnswer: null, 
                         answer: '',
                         answerisCorrect:false, 
-                        pointsEarned: 0}); // Reset answer state
+                        pointsEarned: 0,
+                        diabled: true}); // Reset answer state
         this.setState({questionObject: questionJSON.question, 
                         currentRoundNumber: questionJSON.currentRoundNumber,
                         questionNumber: questionJSON.questionNumber,
@@ -129,7 +159,7 @@ class Question extends React.Component {
     }
 
     handleChange(event){
-        this.setState({playerAnswer: event.target.value});
+        this.setState({playerAnswer: event.target.value, disabled:false});
     }
     
     handleSubmitAnswer(event){
@@ -149,8 +179,8 @@ class Question extends React.Component {
                                     console.error('Error from server: '+data.error)
                                 }
                             });
-        
-
+        this.randomAnswer = null; // reset for questionFive option
+        this.randomAnswerLabel = null; 
     }
 
     render(){
@@ -212,6 +242,7 @@ class Question extends React.Component {
                     );
         }
 
+    
         if(this.state.showQuestion){
             const qObj = this.state.questionObject;
             if(qObj.answers){
@@ -219,6 +250,14 @@ class Question extends React.Component {
                 radios = qObj.answers.map((answer)=>
                     <FormControlLabel  key={answer} value={answer} control={<Radio  color="primary" />} label={renderHTML(answer)} color="primary" />
                 );
+
+                if(this.questionFive){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
+                    if(!this.randomAnswer){
+                        this.randomAnswerLabel = getQuestionFiveTitle();
+                    }
+                    this.randomAnswer =  qObj.answers[Math.floor(Math.random() * qObj.answers.length)];
+                    radios.push(<FormControlLabel  key={'rand_'+this.randomAnswer} value={this.randomAnswer} control={<Radio  color="primary" />} label={this.randomAnswerLabel} color="primary" />);
+                }
             }
             return(
                 
@@ -233,7 +272,7 @@ class Question extends React.Component {
                         {radios}
                         </RadioGroup>
                         <Box  p={3}> 
-                            <Button type="submit" size="small" variant="contained" className={classes.root}  onClick={this.handleSubmitAnswer}>
+                            <Button type="submit" size="small" variant="contained" className={classes.root}  onClick={this.handleSubmitAnswer} disabled={this.state.disabled}>
                             Submit Answer
                             </Button>
                         </Box>

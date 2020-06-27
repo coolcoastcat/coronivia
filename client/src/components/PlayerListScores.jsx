@@ -69,7 +69,7 @@ class PlayerListScores extends React.Component{
     /* alternating row styling */
     getClass(index){
         const { classes } = this.props;
-        return (index %2 === 0 )  ? classes.content : classes.contentGray;
+        return (index %2 === 0 )  ? classes.contentGray : classes.content;
     }
 
     render(){

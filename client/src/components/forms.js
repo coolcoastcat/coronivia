@@ -140,10 +140,16 @@ export function CreateGameForm(props) {
     const [categories, setCategories] = React.useState(selectedCategoryArray);
     const [category_ids, setCategoryIDs] = React.useState(selectedCategoryIDs);
     const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
+    const [questionFive, setQuestionFive] = React.useState(false);
 
     const handlePauseChange = (event) => {
       console.debug("received event: %o",event.target.checked);
       setPauseBetweenRounds(event.target.checked);
+    };
+
+    const handleQuestionFive = (event) => {
+      console.debug("received questionFive event, checked? %o",event.target.checked);
+      setQuestionFive(event.target.checked);
     };
 
     const handleCategoriesChange = (event) => {
@@ -194,8 +200,10 @@ export function CreateGameForm(props) {
         difficulty: difficulty,
         owner: owner,
         categories: category_ids,
-        pauseBetweenRounds: pauseBetweenRounds
+        pauseBetweenRounds: pauseBetweenRounds,
+        questionFive: questionFive
       };
+      console.debug("CreateGame submission: %o",submission);
       props.handleFormSubmit(submission);  
       event.preventDefault();
     }
@@ -309,6 +317,13 @@ export function CreateGameForm(props) {
                   <FormControlLabel
               control={<GreenCheckbox checked={pauseBetweenRounds} onChange={handlePauseChange} name="pauseBetweenRounds" />}
               label="Pause beteween rounds"
+              />
+               
+              </Grid>
+              <Grid item sm={12}>
+                  <FormControlLabel
+              control={<GreenCheckbox checked={questionFive} onChange={handleQuestionFive} name="questionFive" />}
+              label="Enable Question Five"
               />
                
               </Grid>

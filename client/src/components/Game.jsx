@@ -103,8 +103,10 @@ class Game extends React.Component{
      /* Clean up once the game is unmounted */
      componentWillUnmount() {
       window.removeEventListener("beforeunload", this.onUnload);
-       console.log('Closing socket');
-      this.socket.close();
+      console.log('Closing game socket on Game componentWillUnmount');
+      if(this.socket.connected){
+        this.socket.close();
+      }
      }
   
      /* Method bound to CreateGame reference so that Parent can pass in updates to the playerArray and force a refresh 
@@ -166,7 +168,7 @@ class Game extends React.Component{
     
     
       this.socket.on('disconnect',(reason) => {
-        console.debug('event: disconnect from server for reason: '+reason);
+        console.debug('event: disconnect reason: '+reason);
         if(reason === 'transport closed') {
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
@@ -279,9 +281,9 @@ class Game extends React.Component{
       }
       
       let headerMessage = 'Welcome to Game Room: '+this.gameConfig.roomname+'!';
-      let waitingButtons = <p><Button onClick={()=>this.setState({confirmLeave: true})}
+      let waitingButtons = <Button onClick={()=>this.setState({confirmLeave: true})}
                   type="button" 
-                  variant="outlined" >Leave the Game</Button></p>;
+                  variant="outlined" >Leave the Game</Button>;
   
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
@@ -322,23 +324,25 @@ class Game extends React.Component{
               <TextField id="gameroom" label='Share this link' variant='outlined' value={gameURL} style={{  minWidth: 200}} size='small' />
               {clipboardIcon}
               </Box>
+              <Box p={2}>{waitingButtons}</Box>
               <Grid justify="center" container>
                 
+              <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
+                  <Paper  elevation={3}>
+                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
+                  </Paper>
+                </Grid>
+
                 <Grid item sm={6}  style={{ padding: '5px'}} >
                   <Paper elevation={3}>
                     <Box p={1}><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
                   </Paper>
                 </Grid>
 
-                <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
-                  <Paper  elevation={3}>
-                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
-                  </Paper>
-                </Grid>
+              
               
               </Grid>
-              
-              <Box p={2}>{waitingButtons}</Box>
+            
               </Paper>
               </Grid>
             </Grid>

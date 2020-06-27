@@ -98,9 +98,6 @@ export class GameInfo extends React.Component{
                     {this.gameConfig.roomname}
                     </Box>
                 </Grid>
-              
-
-
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
                     <Box p={1}>
                     Owner:
