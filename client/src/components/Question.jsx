@@ -13,6 +13,8 @@ import renderHTML from 'react-render-html';
 
 const questionFiveTitles = [
     "No idea.",
+    "Smkdwn, this one's for you.",
+    "If only Geech, the shmell-hound, were here.",
     "No clue.",
     "Say what?",
     "Duuuuude, how should I know?😎",
@@ -22,12 +24,25 @@ const questionFiveTitles = [
     "These questions are friggin' hard!",
     "Who picked these questions?",
     "I'll take Five for $500, Alex...",
-    "¯\_(ツ)_/¯",
+    "¯\\_(ツ)_/¯",
     "Roll the bones!",
     "I got nothing.",
     "Bubkes, is my answer.",
     "I PICK...FIVE!!!!",
-    "Yeaaaaaaahhh, I'm out."
+    "Yeaaaaaaahhh, I'm out.",
+    "🙈 👉🏽",
+    "🤷🏻‍",
+    "🎯 Throwing a dart here.",
+    "You can pound sand, my man.",
+    "Do you think they should make iPhones for babies? Cuz I do.",
+    "Hey, my man. Just pick anything.",
+    "The cross between a helicoptor an elephant and a rhino (heliphino ;).",
+    "Let the gods decide...",
+    "Seriously?",
+    "civrot probably knows...",
+    "bobhrs says...",
+    "It's all gibberish. Gimme somthing random.",
+    "Serenity now!!"
 ]
 
   /* Get a random funny error phrase to prefix dialogs */
@@ -114,12 +129,12 @@ class Question extends React.Component {
             currentRoundNumber: 0,
             questionNumber: 0,
             totalQuestions: 0,
-            disabled: true
+            disabled: true,
+            randomAnswer: null,
+            randomAnswerLabel: null
 
         };
         this.questionFive = props.questionFive;
-        this.randomAnswer = null;
-        this.randomAnswerLabel = null;
         this.socket = props.socket;
         this.handleChange = this.handleChange.bind(this);
         this.handleSubmitAnswer = this.handleSubmitAnswer.bind(this); 
@@ -133,21 +148,25 @@ class Question extends React.Component {
         @param questionJSON.currentRoundNumber The current round number
     */
     setQuestion(questionJSON){
-
+  
         this.setState({showAnswer: false, 
                         submittedAnswer: false, 
                         playerAnswer: null, 
                         answer: '',
                         answerisCorrect:false, 
                         pointsEarned: 0,
-                        diabled: true}); // Reset answer state
+                        disabled: true}); // Reset answer state
         this.setState({questionObject: questionJSON.question, 
                         currentRoundNumber: questionJSON.currentRoundNumber,
                         questionNumber: questionJSON.questionNumber,
                         totalQuestions: questionJSON.totalQuestions,
-                        showQuestion: true
+                        showQuestion: true,
+                        randomAnswer: '',
+                        randomAnswerLabel: ''
                     });
+
         console.debug("Set question to: %o",questionJSON.question);
+        console.debug("Question state is: %o",this.state);
     }
 
     /* Sets up the event handlers for playing the game */
@@ -179,8 +198,9 @@ class Question extends React.Component {
                                     console.error('Error from server: '+data.error)
                                 }
                             });
-        this.randomAnswer = null; // reset for questionFive option
-        this.randomAnswerLabel = null; 
+        this.setState({randomAnswer:''}); // reset for questionFive option
+        this.setState({randomAnswerLabel:''});
+    
     }
 
     render(){
@@ -252,11 +272,12 @@ class Question extends React.Component {
                 );
 
                 if(this.questionFive){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
-                    if(!this.randomAnswer){
-                        this.randomAnswerLabel = getQuestionFiveTitle();
+                    if(!this.state.randomAnswer || this.state.randomAnswer === ''){ // if a random answer hasn't been initialized, do so
+                        this.setState({randomAnswerLabel: getQuestionFiveTitle()});
+                        this.setState({randomAnswer: qObj.answers[Math.floor(Math.random() * qObj.answers.length)] });
                     }
-                    this.randomAnswer =  qObj.answers[Math.floor(Math.random() * qObj.answers.length)];
-                    radios.push(<FormControlLabel  key={'rand_'+this.randomAnswer} value={this.randomAnswer} control={<Radio  color="primary" />} label={this.randomAnswerLabel} color="primary" />);
+                    // For every state refresh, re-add this option to the answer array
+                    radios.push(<FormControlLabel  key={'rand_'+this.state.randomAnswer} value={this.state.randomAnswer} control={<Radio  color="primary" />} label={this.state.randomAnswerLabel} color="primary" />);
                 }
             }
             return(

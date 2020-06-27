@@ -46,8 +46,9 @@ export default function InfoDialog(props) {
                 </Box>
                 <Box m={3}>
                 This application uses questions from the <a href='http://opentdb.com/' target="_blank"  rel="noopener noreferrer">Open Triva Database project</a>.
-                There is some risk as this project appears to be inactive. And fair warning, there seem to be an inordinate number of questions 
-                on Games and Anime :) I will continue to investigate other sources for trivia questions.
+                Because that project is no longer under active maitenance, I've extracted the questions and organized them into categories and sub-categories for
+                a nicer playing experience. The questions and this entire project are released under the same 
+                <a href='http://creativecommons.org/licenses/by-sa/4.0/' target='_blank' rel="noopener noreferrer">license</a> used in the Open Trivia Database project.
                 </Box>
                 <Box m={3}>
                 This game was created using React and Material-UI for the application client and ExpressJS for the server. It uses socket.io

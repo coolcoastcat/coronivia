@@ -154,8 +154,10 @@ Start the application with:
 This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Attribution
-This application leverages the following projects:
-* [The Open Trivia Database](https://opentdb.com/)
+This application leverages the trivia database from the [The Open Trivia Database](https://opentdb.com/). It releases the source under [the same license](http://creativecommons.org/licenses/by-sa/4.0/).
+Slight changes have been made to the trivia questions to organize categories in a more user friendly hierarchy of category and sub-category. All questions
+have been extracted to [opentdb_questions.json](https://github.com/coolcoastcat/coronivia/blob/master/opentdb_questions.json), which contains a brief 
+attribution of the questions origin. This attribution should be perpetuated in any derived works using these trivia questions.
 
 ## Ideas Parking lot
 * All ideas have been created as [GitHub issues](https://github.com/coolcoastcat/coronivia/issues)
