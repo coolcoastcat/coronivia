@@ -7,6 +7,40 @@ const http = require('http');
 const socketIo = require("socket.io/lib");
 const path = require('path');
 const TriviaDB = require('./trivia-questions');
+const winston = require('winston');
+const fs = require('fs');
+
+// Imports the Google Cloud client library for Winston
+const {LoggingWinston} = require('@google-cloud/logging-winston');
+
+const loggingWinston = new LoggingWinston();
+
+
+
+const logger = winston.createLogger({
+  level: 'debug',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    //
+    // - Write all logs with level `error` and below to `error.log`
+    // - Write all logs with level `info` and below to `combined.log`
+    //
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'combined.log', level: 'info' }),
+    new winston.transports.File({ filename: 'debug.log' }),
+  ],
+});
+
+// log out to console everywhere
+  logger.add(new winston.transports.Console({
+    format: winston.format.simple(),
+  }));
+
+
+if (process.env.NODE_ENV === 'production') {
+  logger.add(loggingWinston);
+}
 
 const gameRoomArray = {};
 
@@ -39,7 +73,7 @@ const socketConnections = {}; // TODO: Determine if there is a use for tracking 
 io.on('connection',handleNewSocketConnection);
 
 function handleNewSocketConnection(socket){
-  console.log('a user connected with socket.id: '+socket.id);
+  logger.debug('a user connected with socket.id: '+socket.id);
   
 
   ///////// Socket Message Handlers /////////
@@ -52,7 +86,8 @@ function handleNewSocketConnection(socket){
     @return All submitted params + game room name and ownerID
   */
   socket.on('create-game',(data,callback)=>{
-    console.log('Handled create-game event with data %o',data);
+    logger.debug('Handled create-game event with data:');
+    logger.debug(data);
     let result = validateParams(["owner","rounds","questions","difficulty","categories"],data);
     if(!result.success){
       console.error(result.messages); 
@@ -65,15 +100,15 @@ function handleNewSocketConnection(socket){
 
     var questionsPerRound = data.questions;
     if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS;}
-    console.log('Number of questions set to: ' + questionsPerRound);
+    logger.debug('Number of questions set to: ' + questionsPerRound);
     
     let rounds = data.rounds;
     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    console.log('Number of rounds set to: ' + rounds);
+    logger.debug('Number of rounds set to: ' + rounds);
 
     let question = data.rounds;
     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    console.log('Number of rounds set to: ' + rounds);
+    logger.debug('Number of rounds set to: ' + rounds);
 
     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
 
@@ -88,7 +123,9 @@ function handleNewSocketConnection(socket){
     let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
  
      gameRoomArray[game.roomName] = game;
-     console.log("Room Created: %o",game);
+     logger.debug(game);
+     logger.info("Game created -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" qs/rnd: "+game.questionCount+
+                    " difficulty: "+game.difficulty+ " pauseBetweenRounds: "+game.pauseBetweenRounds+" questionFive: "+game.questionFive);
      callback({ success: true, 
                 gameStatus: 'WAITING',
                 rounds: game.rounds, 
@@ -109,7 +146,7 @@ function handleNewSocketConnection(socket){
     @emits player-change event to all in roomname 
   */
   socket.on('join',(data,callback)=>{
-    console.log('Handled join event with data %o',data);
+    logger.debug('Handled join event with data %o',data);
     let result = validateParams(["roomname","player"],data);
     if(!result.success){
       console.error(result.messages)  
@@ -142,7 +179,7 @@ function handleNewSocketConnection(socket){
                           questionFive: game.questionFive,
                           players: game.getPlayerInfo()
       }
-      console.log("Sending gameConfig: %o",gameConfig);
+      logger.debug("Sending gameConfig: %o",gameConfig);
       callback(gameConfig);
       // Tell everyone that the Players have changed
       io.to(data.roomname).emit('player-change',game.getPlayerInfo());
@@ -162,7 +199,7 @@ function handleNewSocketConnection(socket){
   */
   socket.on('remove-player',(data,callback)=>{
    
-    console.log('Handled remove-player event with data %o',data);
+    logger.debug('Handled remove-player event with data %o',data);
    
     let result = validateParams(["roomname","player"],data);
    
@@ -182,7 +219,7 @@ function handleNewSocketConnection(socket){
     let game = gameRoomArray[data.roomname];
 
     if(removePlayerResult.success){
-      console.log("Successfully removed player "+data.player+" number of remaining players: "+game.players.length );
+      logger.debug("Successfully removed player "+data.player+" number of remaining players: "+game.players.length );
 
       if(game.players.length > 0){ // Only send an event if there is someone to send it to
         // Tell everyone that the Players have changed
@@ -190,7 +227,7 @@ function handleNewSocketConnection(socket){
         callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
       } else {
         // end the game since there is no one left!
-        console.log("All players have left game "+game.roomName+". Ending game.");
+        logger.debug("All players have left game "+game.roomName+". Ending game.");
         endGame(game.roomName, game.ownerID);
       }
     } else {
@@ -224,7 +261,7 @@ function handleNewSocketConnection(socket){
     }
   
     io.to(data.roomname).emit('game-cancelled',{success: true, message: data.roomname+' was removed'}); // cancel for all
-    console.log("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
+    logger.debug("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
    
     callback({ success: true, message: data.roomname+' was removed'});
   });
@@ -251,11 +288,13 @@ function handleNewSocketConnection(socket){
     }
     gameRoom = gameRoomArray[data.roomname];
     gameRoom.gameStatus = 'PLAYING';
-    console.log('Starting game for room: '+data.roomname);
+    logger.debug('Starting game for room: '+data.roomname);
+    logger.info('Starting game -> '+data.roomname+' with players: '+gameRoom.players.length);
+    logger.info(gameRoom.getPlayerInfo());
     
     
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
-    console.log('Issued game-start event to Game Room: '+gameRoom.roomName);
+    logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
    
    // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
    gameRoom.startRound(gameRoom); // Start the 1st Round
@@ -288,16 +327,16 @@ function handleNewSocketConnection(socket){
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
     if(currentQuestion){
-      console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      logger.debug("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
       if(data.playerAnswer === currentQuestion.correctAnswer) {
         let points = currentQuestion.questionData.pointValue;
         gameRoom.getPlayer(data.player).updateScore(points);
         pointsEarned = points;
-        console.log("Player earned: "+points);
+        logger.debug("Player earned: "+points);
       }
       callback({success: true, points: pointsEarned});
     } else {
-      console.log("Player was too late answering question and no current question exists!");
+      logger.debug("Player was too late answering question and no current question exists!");
       callback({ success: false, error: 'Answer was too late!'});
     }
   
@@ -324,7 +363,7 @@ function handleNewSocketConnection(socket){
    return;
  }
  gameRoom = gameRoomArray[data.roomname];
- console.log('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
+ logger.debug('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
  
 gameRoom.startRound(gameRoom); // Start the next round
 
@@ -336,25 +375,27 @@ gameRoom.startRound(gameRoom); // Start the next round
   ///////// Utility Socket Message Handlers /////////
    socket.on('error',(data) => {
     // Pop a dialog?
-    console.log("Error from client: %o",data);
+    logger.debug("Error from client: %o",data);
   }
   );
 
   socket.on('disconnect',() => {
     
-    console.log('A user with socket.id: '+socket.id +' disconnected');
+    logger.debug('A user with socket.id: '+socket.id +' disconnected');
 
 
     const roomname =  socketConnections[socket.id];
     const game = gameRoomArray[roomname];
     if(game && game.hasConnectedPlayers()){ // make sure it still exists as a cancel game may have removed it and it has active users
-       console.log('Sending players list update to room: '+roomname);
+       logger.debug('Sending players list update to room: '+roomname);
        io.to(roomname).emit('player-change',game.getPlayerInfo());
     }
     delete socketConnections[socket.id]; // Remove user from the users in rooms
 
     // Remove the game is there are no connected users
-    if(game && !game.hasConnectedPlayers()){
+    // If game is in WAITING, user might disconnect when windowing on a mobile device and so allow that case
+    if(game && !game.hasConnectedPlayers() && game.gameStatus !== 'WAITING'){
+      logger.debug('On user disconnect, game '+game.roomName+' has no more active players. Removing.');
       endGame(game.roomName,game.ownerID);
     }
   });
@@ -364,7 +405,7 @@ gameRoom.startRound(gameRoom); // Start the next round
 
 /* Start the server */
 const startTime = (new Date()).toTimeString();
-server.listen(port, () => console.log(`Listening on port ${port} at ${startTime}`));
+server.listen(port, () => logger.debug(`Listening on port ${port} at ${startTime}`));
 
 
 
@@ -383,11 +424,11 @@ function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback
 
   // Check if room still exists. The game may have been cancelled and if so, we want to return, which will break the game cycle.
   if(!gameRoomArray[roomName]){
-      console.log("No roomName: "+roomName +" found in createTimer(). The game has been cancelled so ending game cycle.");
+      logger.debug("No roomName: "+roomName +" found in createTimer(). The game has been cancelled so ending game cycle.");
       return;
   }
   
-  console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + ' event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
+  logger.debug('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + ' event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
   let interval = secs; // Used for calculating the % time remaining on the client side
   let timer = setInterval(()=>{
     io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
@@ -428,13 +469,13 @@ function addPlayer(playerToAdd, roomname, socket){
     }
     result.message = "Reconnecting to previous session";
     player.socket = socket; // update the player's socket with new one
-    console.log("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
+    logger.debug("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
     return result;
   }
   
   var newPlayer = new Player(playerToAdd, roomname, socket); 
   gameRoomArray[roomname].players.push(newPlayer);
-  console.log("Player with name: "+playerToAdd+" added to game:"+roomname);
+  logger.debug("Player with name: "+playerToAdd+" added to game:"+roomname);
   result.message ='Player with name:'+playerToAdd+" added to game:"+roomname;
   return result;
 }
@@ -449,7 +490,7 @@ function removePlayer(playerToRemove, roomname){
 
   const filtered = gameRoomArray[roomname].players.filter(player => { return player.name !== playerToRemove});
   gameRoomArray[roomname].players = filtered;
-  console.log('Player '+playerToRemove+' removed from '+roomname);
+  logger.debug('Player '+playerToRemove+' removed from '+roomname);
   return result;
 }
 
@@ -507,13 +548,17 @@ function validateParams(params,query){
 */
 function endGame(roomName, ownerID){
   if(!isGameOwner(roomName,ownerID)) { 
-      console.log("No game matched roomName: "+roomName+" ownerID: "+ownerID); 
+      logger.debug("No game matched roomName: "+roomName+" ownerID: "+ownerID); 
       return false;
     } // checks for existence and ownership
 
-  // TODO: Log exit with game stats
+  const game = gameRoomArray[roomName];
+  logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
+              " players at end: "+game.players.length)
+  logger.info(game.getPlayerInfo());
+
   delete gameRoomArray[roomName];
-  console.log("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
+  logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
   return true;
 }
 
@@ -661,7 +706,7 @@ class GameRoom{
 
         // Check case if we ran out of questions
         if(start >= questions.length){ 
-          console.log("Ran out of questions for user selected criteria: \n"+
+          logger.debug("Ran out of questions for user selected criteria: \n"+
                       "  categories: "+categories+"\n"+
                       "  difficulty: "+difficulty+"\n"+
                       "  rounds: "+rounds+"\n"+
@@ -686,7 +731,7 @@ class GameRoom{
 
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
       let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
-      console.log("Starting " + roundTitle);
+      logger.debug("Starting " + roundTitle);
       createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,true,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
       gameRoom.endGame();
@@ -698,7 +743,7 @@ class GameRoom{
   */
   hasMoreRounds(){
     let hasMore = (this.currentRoundNumber == this.rounds)? false : true ;
-    console.log("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
+    logger.debug("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
       " this.rounds: "+this.rounds+" hasMore: "+hasMore);
     return hasMore;
   }
@@ -742,7 +787,7 @@ class GameRoom{
  sendAnswer(gameRoom){
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
-  // console.log("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
+  // logger.debug("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
   
   io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
   let answerTitle = 'Answer';
@@ -760,13 +805,13 @@ class GameRoom{
     this.currentRoundNumber++;
     let gameEnded = (this.rounds === this.currentRoundNumber)? true : false;
 
-    console.log("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
+    logger.debug("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
 
     io.to(this.roomName).emit('round-end',{playerArray: this.getPlayerInfo(), gameEnded:gameEnded});
     
     let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
     
-    let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>console.log("Waiting for Owner to start the next round");
+    let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>logger.debug("Waiting for Owner to start the next round");
 
     createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,callback);
   }
@@ -776,16 +821,16 @@ class GameRoom{
   */
   endGame(){
     let winningPlayerArray = this.getWinners();
-    console.log("sending winner array: %o ",winningPlayerArray);
+    logger.debug("sending winner array: %o ",winningPlayerArray);
     io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
-    console.log("Closing all the sockets for room "+gameRoom.roomName);
+    logger.debug("Closing all the sockets for room "+gameRoom.roomName);
     this.players.forEach(player=>{
       player.socket.disconnect(true);
-      console.log('Disconneded socket for player: '+player.name);
+      logger.debug('Disconneded socket for player: '+player.name);
     });
 
     gameRoom.gameStatus = 'ENDED';
-    console.log('Calling external function to delete game');
+    logger.debug('Calling external function to delete game');
     endGame(gameRoom.roomName, gameRoom.ownerID);
   
 }
@@ -851,8 +896,8 @@ class Round {
   */
   getCurrentQuestion(){
     let currentQuestionObj = this.questionArray[this.currentQuestionNumber];
-//    console.log('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
-//    console.log('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
+//    logger.debug('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
+//    logger.debug('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
     return currentQuestionObj;
   }
 
@@ -910,7 +955,7 @@ class Player{
 @return: res.send sends JSON as a resonse to the call. No explicit return.
 */
 app.get('/api/create-game', (req, res) => {
-  // console.log("my object: %o", req)
+  // logger.debug("my object: %o", req)
   result = validateParams(["owner","rounds","questions","difficulty","categories"],req.query);
   if(!result.success){
     console.error(result.messages)  
@@ -919,16 +964,16 @@ app.get('/api/create-game', (req, res) => {
   }
 
   var owner = req.query.owner;
-  console.log('Owner set to: ' + owner);
+  logger.debug('Owner set to: ' + owner);
 
 
   var questionsPerRound = req.query.questions;
   if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS; }
-  console.log('Number of questions set to: ' + questionsPerRound);
+  logger.debug('Number of questions set to: ' + questionsPerRound);
   
   var rounds = req.query.rounds;
   if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
-  console.log('Number of rounds set to: ' + rounds);
+  logger.debug('Number of rounds set to: ' + rounds);
 
 
   var pauseBetweenRounds = (req.query.pauseBetweenRounds) ? req.query.pauseBetweenRounds : false; 
@@ -942,7 +987,7 @@ app.get('/api/create-game', (req, res) => {
   game = new GameRoom(owner,rounds,questionsPerRound,difficulty,pauseBetweenRounds, categories);
 
   gameRoomArray[game.roomName] = game;
-  console.log("Room Created: %o",game);
+  logger.debug("Room Created: %o",game);
 
   res.send({ game_status: 'WAITING',rounds: rounds, questions: questionsPerRound, roomname: game.roomName, owner: owner, owner_id: game.ownerID });
 })
@@ -1028,7 +1073,7 @@ if(!isGameOwner(req.query.roomname, req.query.ownerID)){
   // START THE GAME!
  gameRoomArray[req.query.roomname].gameState = 'PLAYING';
 
-console.log("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
+logger.debug("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
 res.send({ game_status: 'PLAYING',room_name: req.query.roomname });
 })
 
@@ -1055,7 +1100,7 @@ if(!endGame(req.query.roomname, req.query.ownerID)){
   res.status(500).send({ game_status: 'failed', error: 'unable to remove game...not sure why' });
   return;
 }
-console.log("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
+logger.debug("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
 res.send({ game_status: 'removed',room_name: req.query.roomname });
 })
 
@@ -1063,30 +1108,53 @@ res.send({ game_status: 'removed',room_name: req.query.roomname });
 app.get('/api/list-games', (req, res) => {
 var gameList = {games: []};
 const roomIDs = Object.keys(gameRoomArray);
-console.log("Room IDs: "+roomIDs);
+logger.debug("Room IDs: "+roomIDs);
 roomIDs.forEach(id => {
   var gameBrief = {};
-  console.log(gameRoomArray[id]);
+  logger.debug(gameRoomArray[id]);
   gameBrief["roomName"] = gameRoomArray[id].roomName;
   gameBrief["createdDate"] = gameRoomArray[id].createdDate;
   gameBrief["players"] = gameRoomArray[id].getPlayerInfo();
   gameBrief["status"] = gameRoomArray[id].state;
   gameList.games.push(gameBrief);  
   });
-  console.log("/api/list-games called:\n %o",gameList);
+  logger.debug("/api/list-games called:\n %o",gameList);
   res.send(gameList);
 })
 
 // DEBUG - REMOVE BEFORE PROD
 app.get('/api/dump-all-games', (req, res) => {
-  console.log("/api/dump-all-games called");
+  logger.debug("/api/dump-all-games called");
   res.send({ gameRoomArray });
 })
 
 // DEBUG - REMOVE BEFORE PROD
 app.get('/api/get-all-users', (req, res) => {
-  console.log("/api/get-all-users called");
+  logger.debug("/api/get-all-users called");
   res.send({ socketConnections });
+})
+
+// DEBUG - REMOVE BEFORE PROD
+app.get('/api/info', (req, res) => {
+  logger.debug("/api/info called");
+  const infoLog = fs.readFileSync('combined.log').toString();
+  
+  res.send({infoLog});
+})
+
+// DEBUG - REMOVE BEFORE PROD
+app.get('/api/debug', (req, res) => {
+  logger.debug("/api/info called");
+  const debugLog = fs.readFileSync('debug.log').toString();
+  res.send({ debugLog });
+})
+
+// DEBUG - REMOVE BEFORE PROD
+app.get('/api/error', (req, res) => {
+  logger.debug("/api/error called");
+  const errorLog = fs.readFileSync('error.log').toString();
+  errorLog 
+  res.send({ errorLog });
 })
 
 // DEBUG - REMOVE BEFORE PROD
@@ -1099,11 +1167,11 @@ if(!result.success){
   return;
 }
 
-  console.log("/api/send-event called");
+  logger.debug("/api/send-event called");
   const roomIDs = Object.keys(gameRoomArray);
   const event = req.query.e;
   const queryData = JSON.parse(req.query.d);
-  console.log(queryData);
+  logger.debug(queryData);
   roomIDs.forEach(id => {
     const gameRoom = gameRoomArray[id];
     

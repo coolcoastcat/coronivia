@@ -21,6 +21,7 @@ let devMsg = '';
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   devMsg = '[development]';
 }
+const VERSION = 'v0.0.8';
 
 /////////////  REACT ROUTES /////////////  
 export default function App() {
@@ -134,6 +135,7 @@ class Landing extends React.Component {
            buttonStyle='btn--success--solid'>Join Game</Button>
         </Link>
         <InfoDialog open={this.state.showInfoDialog} closeCallback={this.handleCloseInfoClick} />
+        <Box p={2} style={{fontSize:'8px', color: 'white'}}>{VERSION}</Box>
       </Box>
     );
   }

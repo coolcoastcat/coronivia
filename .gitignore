@@ -19,6 +19,7 @@ scratch.js
 client/build
 /public/*
 !/public/README.md
+*.log
 
 # misc
 .DS_Store
