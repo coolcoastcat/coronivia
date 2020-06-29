@@ -63,8 +63,8 @@ const gameStats = { // games stats since the server started
   questionsServed: 0, 
   gamesAbandoned: 0,
   gamesFinished: 0,
-  largestGame: 0,
-  mostQuestions: 0,
+  mostPlayersPerGame: 0,
+  mostQuestionsPerGame: 0,
   categoryFrequency: { 9:0, 10:0, 15:0, 17: 0, 20:0, 21:0, 22:0, 23:0, 24:0, 31:0},
   pauseBetweenRounds: { no: 0, yes: 0},
   seconds: {5: 0,10:0, 15:0, 20:0, 30:0},
@@ -134,9 +134,6 @@ function handleNewSocketConnection(socket){
     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
     logger.debug('Number of rounds set to: ' + rounds);
 
-    let question = data.rounds;
-    if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    logger.debug('Number of rounds set to: ' + rounds);
 
     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
     gameStats.seconds[questionCountdown]++;
@@ -155,7 +152,7 @@ function handleNewSocketConnection(socket){
     let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
  
      gameRoomArray[game.roomName] = game;
-     logger.debug(game);
+    
      logger.info("Game created -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" qs/rnd: "+game.questionCount+
                     " difficulty: "+game.difficulty+ " pauseBetweenRounds: "+game.pauseBetweenRounds+" questionFive: "+game.questionFive);
      callback({ success: true, 
@@ -330,7 +327,7 @@ function handleNewSocketConnection(socket){
     logger.info(gameRoom.getPlayerInfo());
     
     gameStats.gamesPlayed++;
-    gameStats.largestGame = ( gameRoom.players.length > gameStats.largestGame ) ? gameRoom.players.length : gameStats.largestGame;
+    gameStats.mostPlayersPerGame = ( gameRoom.players.length > gameStats.mostPlayersPerGame ) ? gameRoom.players.length : gameStats.mostPlayersPerGame;
 
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
     logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
@@ -597,7 +594,7 @@ function endGame(roomName, ownerID){
   logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
               " players at end: "+game.players.length);
   logger.info(game.getPlayerInfo());
-  logger.info(gameStats);
+  logger.info(JSON.stringify(gameStats));
 
   delete gameRoomArray[roomName];
   logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
@@ -730,7 +727,7 @@ class GameRoom{
 
     let totalQuestions = rounds * questionsPerRound;
 
-    if(totalQuestions > gameStats.mostQuestions){gameStats.mostQuestions = totalQuestions; }
+    if(totalQuestions > gameStats.mostQuestionsPerGame){gameStats.mostQuestionsPerGame = totalQuestions; }
 
     const questions = TriviaDB.getTriviaQuestions(categories,(totalQuestions), difficulty);
     console.debug("DEBUG getQuestions() -> received "+questions.length+" questions");
@@ -875,17 +872,24 @@ class GameRoom{
     gameStats.gamesFinished++;
 
     let winningPlayerArray = this.getWinners();
-    logger.debug("sending winner array: %o ",winningPlayerArray);
+    logger.debug("sending winner array:")
+    logger.debug(winningPlayerArray);
     io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
-    logger.debug("Closing all the sockets for room "+gameRoom.roomName);
-    this.players.forEach(player=>{
-      player.socket.disconnect(true);
-      logger.debug('Disconnected socket for player: '+player.name);
-    });
+    logger.debug('Pausing for a second before game cleanup for '+gameRoom.roomName);
+    
+    // delay 1 second before disconnecting all sockets to ensure the emissions happen
+    setTimeout(function(){
+      logger.debug("Closing all the sockets for room "+gameRoom.roomName);
+      gameRoom.players.forEach(player=>{
+        player.socket.disconnect(true);
+        logger.debug('Disconnected socket for player: '+player.name);
+      });
+  
+      gameRoom.gameStatus = 'ENDED';
+      logger.debug('Calling external function to delete game');
+      endGame(gameRoom.roomName, gameRoom.ownerID);
+    }, 1000);
 
-    gameRoom.gameStatus = 'ENDED';
-    logger.debug('Calling external function to delete game');
-    endGame(gameRoom.roomName, gameRoom.ownerID);
   
 }
 
@@ -1165,7 +1169,6 @@ const roomIDs = Object.keys(gameRoomArray);
 logger.debug("Room IDs: "+roomIDs);
 roomIDs.forEach(id => {
   var gameBrief = {};
-  logger.debug(gameRoomArray[id]);
   gameBrief["roomName"] = gameRoomArray[id].roomName;
   gameBrief["createdDate"] = gameRoomArray[id].createdDate;
   gameBrief["players"] = gameRoomArray[id].getPlayerInfo();
