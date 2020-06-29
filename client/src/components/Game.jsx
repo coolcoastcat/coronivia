@@ -169,7 +169,7 @@ class Game extends React.Component{
     
       this.socket.on('disconnect',(reason) => {
         console.debug('event: disconnect reason: '+reason);
-        if(reason === 'transport closed') {
+        if(reason === 'transport close') {
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
           this.socket.disconnect(true);
@@ -218,10 +218,10 @@ class Game extends React.Component{
 
         console.debug("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
-        console.debug('Cancel game result: %o',data);
+          console.debug('Cancel game result: %o',data);
         if(!data.success){ this.handleError(data.error); } 
-       
         });
+        this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
     }
   
     /* Handles the button click to start the game! */

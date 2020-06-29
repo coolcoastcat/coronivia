@@ -17,6 +17,10 @@ const styles = theme => ({
       color: 'white',
       height: 48,
       padding: '0 30px',
+    },
+    borderBox: {
+        border: 1,
+        margin: '5px 2px'
     }
   });
 
@@ -63,7 +67,9 @@ class GamePlay extends React.Component{
 
 
         this.socket.on('round-end',(data) =>{
-            this.setState({players: data.playerArray});
+            let tmpPlayers = data.playerArray;
+            tmpPlayers.sort((a,b)=> (a.score < b.score)? 1: (a.score === b.score) ? ((a.player > b.player)? 1 : -1) : -1);
+            this.setState({players: tmpPlayers});
             this.setState({gameEnded: data.gameEnded});
            // this.playerListElement.current.updatePlayers(this.state.players); // Update the child
             console.debug('event: round-end with data: %o',data);
@@ -238,6 +244,12 @@ class GamePlay extends React.Component{
                                     leaveCallback={this.handleLeaveGame}
                                     >
                         <WinnerList leaveGame={this.handleLeaveGame}  winners={this.winningPlayerArray} />
+                        <Box p={2} style={{border: "1px solid black", margin: '5px 2px'}}  >
+                            <PlayerListScores players={this.state.players} 
+                                        ref={this.playerListElement}
+                                        showScore={true} />
+                        </Box>
+                         <Box p={2}  style={{ margin: '5px 2px', padding: '0px' }}><Button className={classes.colorfulButton}  onClick={this.handleLeaveGame} >The End</Button></Box>
                     </QuestionDialog>
                 </Box> 
                 );

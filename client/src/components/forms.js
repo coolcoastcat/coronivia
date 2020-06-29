@@ -131,6 +131,7 @@ export function CreateGameForm(props) {
     const MAX_ROUNDS = 10;
     const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
+    const SECONDS = [5,10,15,20,30];
     const [rounds, setRounds] = React.useState(1);
     const [difficulty, setDifficulty] = React.useState('any');
     const [questions, setQuestions] = React.useState(5);
@@ -141,6 +142,8 @@ export function CreateGameForm(props) {
     const [category_ids, setCategoryIDs] = React.useState(selectedCategoryIDs);
     const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
     const [questionFive, setQuestionFive] = React.useState(false);
+    const [countdownSeconds, setCountdownSeconds] = React.useState(15);
+    
 
     const handlePauseChange = (event) => {
       console.debug("received event: %o",event.target.checked);
@@ -183,6 +186,11 @@ export function CreateGameForm(props) {
       setDifficulty(event.target.value);
       console.debug('set difficulty to: '+event.target.value);
     }
+
+    function handleSecondsChange(event) {
+      setCountdownSeconds(event.target.value);
+      console.debug('set countdown seconds to: '+event.target.value);
+    }
   
     function handleOwnerChange(event) {
       let tmpPlayerName = event.target.value.trim();
@@ -201,7 +209,8 @@ export function CreateGameForm(props) {
         owner: owner,
         categories: category_ids,
         pauseBetweenRounds: pauseBetweenRounds,
-        questionFive: questionFive
+        questionFive: questionFive,
+        questionCountdown: countdownSeconds
       };
       console.debug("CreateGame submission: %o",submission);
       props.handleFormSubmit(submission);  
@@ -275,6 +284,20 @@ export function CreateGameForm(props) {
             </ExpansionPanelSummary>
             <ExpansionPanelDetails>
             <Grid container>
+            <Grid item xs={12}>
+                <FormControl className={classes.formControl}>
+                <InputLabel id="seconds-select-label">Question Countdown</InputLabel>
+                <Select
+                  labelId="seconds-select-label"
+                  id="seconds-select"
+                  value={countdownSeconds}
+                  onChange={handleSecondsChange}
+                >
+                  { SECONDS.map(countdownSeconds => <MenuItem key={countdownSeconds} value={countdownSeconds}>{countdownSeconds} secs</MenuItem>) }  
+                </Select>
+                </FormControl>
+              </Grid>
+
 
               <Grid item xs={12}>
                 <FormControl className={classes.formControl}>

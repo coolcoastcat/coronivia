@@ -10,6 +10,7 @@ const TriviaDB = require('./trivia-questions');
 const winston = require('winston');
 const fs = require('fs');
 
+
 // Imports the Google Cloud client library for Winston
 const {LoggingWinston} = require('@google-cloud/logging-winston');
 
@@ -29,20 +30,46 @@ const logger = winston.createLogger({
     new winston.transports.File({ filename: 'error.log', level: 'error' }),
     new winston.transports.File({ filename: 'combined.log', level: 'info' }),
     new winston.transports.File({ filename: 'debug.log' }),
+    new winston.transports.Console({ format: winston.format.simple()})
   ],
 });
 
-// log out to console everywhere
-  logger.add(new winston.transports.Console({
-    format: winston.format.simple(),
-  }));
 
 
 if (process.env.NODE_ENV === 'production') {
   logger.add(loggingWinston);
 }
 
-const gameRoomArray = {};
+// test the logging output
+console.error("console.error -> coronivia-server.js log initialization test.");
+console.log("console.log -> coronivia-server.js log initialization test.");
+console.debug("console.debug -> coronivia-server.js log initialization test.");
+
+logger.error("winston logger.error -> coronivia-server.js log initialization test.");
+logger.info("winston logger.info -> coronivia-server.js log initialization test.");
+logger.debug("winston logger.debug -> coronivia-server.js log initialization test.");
+
+
+// Some meta objects for tracking objects and data across the server
+const gameRoomArray = {}; // All games are stored here
+const socketConnections = {}; // Tracking all socket connections
+const gameStats = { // games stats since the server started
+  gamesCreated: 0,
+  gamesPlayed: 0,
+  gamesCancelled: 0,
+  playersJoined: 0,
+  roundsPlayed: 0,
+  questionsAnswered: 0,
+  questionsServed: 0, 
+  gamesAbandoned: 0,
+  gamesFinished: 0,
+  largestGame: 0,
+  mostQuestions: 0,
+  categoryFrequency: { 9:0, 10:0, 15:0, 17: 0, 20:0, 21:0, 22:0, 23:0, 24:0, 31:0},
+  pauseBetweenRounds: { no: 0, yes: 0},
+  seconds: {5: 0,10:0, 15:0, 20:0, 30:0},
+  questionFive: {yes:0, no: 0}
+}; 
 
 
 const app = express();
@@ -68,13 +95,12 @@ app.use(express.static(path.join(__dirname, "/public")));
 ///////////////  WEBSOCKET CONFIGURATION ///////////////
 const server = http.createServer(app);
 const io = socketIo(server); // setup the websocket
-const socketConnections = {}; // TODO: Determine if there is a use for tracking all sockets
+
 
 io.on('connection',handleNewSocketConnection);
 
 function handleNewSocketConnection(socket){
-  logger.debug('a user connected with socket.id: '+socket.id);
-  
+  logger.debug('a user connected with socket.id: '+socket.id);  
 
   ///////// Socket Message Handlers /////////
 
@@ -86,6 +112,8 @@ function handleNewSocketConnection(socket){
     @return All submitted params + game room name and ownerID
   */
   socket.on('create-game',(data,callback)=>{
+    gameStats.gamesCreated++;
+
     logger.debug('Handled create-game event with data:');
     logger.debug(data);
     let result = validateParams(["owner","rounds","questions","difficulty","categories"],data);
@@ -111,13 +139,17 @@ function handleNewSocketConnection(socket){
     logger.debug('Number of rounds set to: ' + rounds);
 
     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
+    gameStats.seconds[questionCountdown]++;
 
     let pauseBetweenRounds = data.pauseBetweenRounds ? data.pauseBetweenRounds : false;
+    (pauseBetweenRounds) ? gameStats.pauseBetweenRounds.yes++ : gameStats.pauseBetweenRounds.no++;
 
     let questionFive = data.questionFive ? data.questionFive : false;
+    (questionFive) ? gameStats.questionFive.yes++ : gameStats.questionFive.no++;
 
       // If the categories array is empty, set the category to General by default
     let categories = (data.categories.length === 0) ? [9] : data.categories;
+    categories.forEach(category =>gameStats.categoryFrequency[category]++);
 
      // create a new game room with the supplied parameters and add it to the list of games
     let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
@@ -146,6 +178,7 @@ function handleNewSocketConnection(socket){
     @emits player-change event to all in roomname 
   */
   socket.on('join',(data,callback)=>{
+    gameStats.playersJoined++; // log data
     logger.debug('Handled join event with data %o',data);
     let result = validateParams(["roomname","player"],data);
     if(!result.success){
@@ -228,6 +261,7 @@ function handleNewSocketConnection(socket){
       } else {
         // end the game since there is no one left!
         logger.debug("All players have left game "+game.roomName+". Ending game.");
+        gameStats.gamesAbandoned++;
         endGame(game.roomName, game.ownerID);
       }
     } else {
@@ -238,6 +272,7 @@ function handleNewSocketConnection(socket){
   });
   
   socket.on('cancel-game',(data,callback) =>{
+    gameStats.gamesCancelled++;
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
       console.error(result.messages)  
@@ -273,6 +308,8 @@ function handleNewSocketConnection(socket){
     @emits game-started to all players in roomname with no data 
   */
   socket.on('start-game',(data,callback) =>{
+
+
     // Validate room and owner id
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
@@ -292,7 +329,9 @@ function handleNewSocketConnection(socket){
     logger.info('Starting game -> '+data.roomname+' with players: '+gameRoom.players.length);
     logger.info(gameRoom.getPlayerInfo());
     
-    
+    gameStats.gamesPlayed++;
+    gameStats.largestGame = ( gameRoom.players.length > gameStats.largestGame ) ? gameRoom.players.length : gameStats.largestGame;
+
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
     logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
    
@@ -308,6 +347,8 @@ function handleNewSocketConnection(socket){
     @param data.answer The selcted answer from the user
   */
   socket.on('player-answer',(data,callback) =>{
+    gameStats.questionsAnswered++;
+
     let result = validateParams(["gameRoomName","player","playerAnswer"],data);
    
     if(!result.success){
@@ -554,8 +595,9 @@ function endGame(roomName, ownerID){
 
   const game = gameRoomArray[roomName];
   logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
-              " players at end: "+game.players.length)
+              " players at end: "+game.players.length);
   logger.info(game.getPlayerInfo());
+  logger.info(gameStats);
 
   delete gameRoomArray[roomName];
   logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
@@ -687,6 +729,9 @@ class GameRoom{
   getQuestions(rounds,questionsPerRound,difficulty, categories){
 
     let totalQuestions = rounds * questionsPerRound;
+
+    if(totalQuestions > gameStats.mostQuestions){gameStats.mostQuestions = totalQuestions; }
+
     const questions = TriviaDB.getTriviaQuestions(categories,(totalQuestions), difficulty);
     console.debug("DEBUG getQuestions() -> received "+questions.length+" questions");
 
@@ -730,6 +775,8 @@ class GameRoom{
     //TODO: Check to see that at least one client is connected. Otherwise end the game and clean-up
 
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
+      gameStats.roundsPlayed++;
+
       let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
       logger.debug("Starting " + roundTitle);
       createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,true,gameRoom,gameRoom.playRound);
@@ -768,7 +815,8 @@ class GameRoom{
     @param totalQuestions The count of questions in this round.  
   */
   sendNextQuestion(question,currentRoundNumber, questionNumber, totalQuestions){
-   
+    gameStats.questionsServed++;
+
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
@@ -788,8 +836,12 @@ class GameRoom{
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
   // logger.debug("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
-  
-  io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
+  try{
+    io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
+  } catch(err){
+    console.error('Caught error: '+err);
+  }
+
   let answerTitle = 'Answer';
   currentRoundObj.currentQuestionNumber++;
   //createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
@@ -820,13 +872,15 @@ class GameRoom{
     @emits game-ended With the winner 
   */
   endGame(){
+    gameStats.gamesFinished++;
+
     let winningPlayerArray = this.getWinners();
     logger.debug("sending winner array: %o ",winningPlayerArray);
     io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
     logger.debug("Closing all the sockets for room "+gameRoom.roomName);
     this.players.forEach(player=>{
       player.socket.disconnect(true);
-      logger.debug('Disconneded socket for player: '+player.name);
+      logger.debug('Disconnected socket for player: '+player.name);
     });
 
     gameRoom.gameStatus = 'ENDED';
@@ -1137,9 +1191,7 @@ app.get('/api/get-all-users', (req, res) => {
 // DEBUG - REMOVE BEFORE PROD
 app.get('/api/info', (req, res) => {
   logger.debug("/api/info called");
-  const infoLog = fs.readFileSync('combined.log').toString();
-  
-  res.send({infoLog});
+  res.send({gameStats});
 })
 
 // DEBUG - REMOVE BEFORE PROD

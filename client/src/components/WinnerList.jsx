@@ -71,7 +71,6 @@ export default function WinnerList(props){
             {(winners.length > 1)?<Grid className={classes.winnerListHead} item xs={8}>Player</Grid>:''}
             {(winners.length > 1)?<Grid className={classes.winnerListHead}item xs={4}>Score</Grid>:''}
             {winnerOutput}
-            <Grid style={{fontSize:'16px'}} item xs={12} ><Button className={classes.colorfulButton}  onClick={handleLeaveGame} >The End</Button></Grid>
         </Grid>
     );
 

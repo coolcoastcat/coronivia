@@ -76,20 +76,25 @@ const styles = theme => ({
         fontSize: '20px'
     },
     correct: {
+        margin: '10px 0px',
         background: '#edf7ed'
     },
     incorrect: {
+        margin: '10px 0px',
         background: '#fdedeb'
     },
     none: {
 
     },
     question: {
-        fontSize: '25px',
+        fontSize: '18px',
         // background: 'lightGray',
+        padding: '4px 4px',
         background: 'linear-gradient(45deg, #b1fac5 30%, #f9fcbd 90%)',
-        padding: '4px 5px',
         fontFamily: 'sans-serif'
+    },
+    questionPad: {
+        margin: '10px 0px',
     },
     questionDataHd: {
         fontSize: '14px',
@@ -136,8 +141,6 @@ class Question extends React.Component {
         };
         this.questionFive = props.questionFive;
         this.socket = props.socket;
-        this.handleChange = this.handleChange.bind(this);
-        this.handleSubmitAnswer = this.handleSubmitAnswer.bind(this); 
         this.setupEventHandlers();
     }
     
@@ -177,12 +180,10 @@ class Question extends React.Component {
         });
     }
 
-    handleChange(event){
-        this.setState({playerAnswer: event.target.value, disabled:false});
-    }
     
-    handleSubmitAnswer(event){
-        let sendData = {player: this.player, gameRoomName: this.gameRoomName, playerAnswer:this.state.playerAnswer};
+    handleSubmitAnswer= (event)=>{
+        this.setState({playerAnswer: event.target.value, disabled:false});
+        let sendData = {player: this.player, gameRoomName: this.gameRoomName, playerAnswer:event.target.value};
         console.debug("Sending answer to server: %o",sendData);
         this.socket.emit('player-answer',
                           sendData,
@@ -286,17 +287,12 @@ class Question extends React.Component {
                     <Grid className={classes.sans} item xs={12}><Box className={classes.questionDataHd} component="span">Category:</Box> {renderHTML(qObj.category)} - {renderHTML(qObj.sub_category)}</Grid>
                     <Grid className={classes.sans} item xs={12}><Box className={classes.questionDataHd} component="span">Difficulty:</Box> {qObj.difficulty}</Grid>
                     <Grid item xs={12} >
-                        <Box  p={3}>                
+                        <Box className={classes.questionPad} >                
                         <FormControl component="fieldset">
                         <FormLabel className={classes.question} component="legend" >{renderHTML(qObj.question)}</FormLabel>
-                        <RadioGroup aria-label="playerAnswer" name="playerAnswer" value={this.state.playerAnswer} onChange={this.handleChange}>
+                        <RadioGroup aria-label="playerAnswer" name="playerAnswer" value={this.state.playerAnswer} onChange={this.handleSubmitAnswer}>
                         {radios}
                         </RadioGroup>
-                        <Box  p={3}> 
-                            <Button type="submit" size="small" variant="contained" className={classes.root}  onClick={this.handleSubmitAnswer} disabled={this.state.disabled}>
-                            Submit Answer
-                            </Button>
-                        </Box>
                         </FormControl>
                     </Box>
                 </Grid>

@@ -13,7 +13,8 @@
     "client": "cd client && yarn start",
     "server": "nodemon coronivia-server.js",
     "package": "cd client && yarn build && cd .. && cp -r client/build/* ./public",
-    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
+    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\"",
+    "debug": "DEBUG=* concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
   },
   "dependencies": {
     "@google-cloud/logging-winston": "^3.0.6",
