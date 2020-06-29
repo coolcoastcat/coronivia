@@ -3,6 +3,8 @@ import React from "react";
 import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import { makeStyles } from '@material-ui/core/styles';
+import { green } from '@material-ui/core/colors';
+import StarTwoToneIcon from '@material-ui/icons/StarTwoTone';
 
   const useStyles = makeStyles((theme) => ({
     tieTitle: {
@@ -67,6 +69,13 @@ export default function WinnerList(props){
         
     return(
         <Grid container spacing={2} >
+            <Grid style={{textAlign: 'center'}} item xs={12}>
+                <StarTwoToneIcon fontSize='large' style={{ color: green[500] }} />
+                <StarTwoToneIcon fontSize='large' style={{ color: green[500] }} />
+                <StarTwoToneIcon fontSize='large' style={{ color: green[500] }} />
+                <StarTwoToneIcon fontSize='large' style={{ color: green[500] }} />
+                <StarTwoToneIcon fontSize='large' style={{ color: green[500] }} />
+            </Grid>
             {(winners.length > 1)?<Grid className={classes.tieTitle}  item xs={12}>It Was A Tie!</Grid>:''}
             {(winners.length > 1)?<Grid className={classes.winnerListHead} item xs={8}>Player</Grid>:''}
             {(winners.length > 1)?<Grid className={classes.winnerListHead}item xs={4}>Score</Grid>:''}
