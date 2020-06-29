@@ -176,8 +176,8 @@ class Game extends React.Component{
     
     
       this.socket.on('disconnect',(reason) => {
- 
-        console.debug("reason type: "+typeof(reason));
+        
+        console.debug("disconnect reason: "+reason);
         let match = (reason === 'transport close') ? 'yes':'no';
         console.debug("did reason match 'transport close' ? "+match);
 
@@ -370,7 +370,7 @@ class Game extends React.Component{
               </Grid>
                  <Snackbar open={this.state.alertDisconnect} autoHideDuration={3000} onClose={this.handleAlertClose}>
                   <Alert onClose={this.handleAlertClose} severity="warning">
-                    You are not connected to the server...trying to reconnect. Wait a moment and try again.
+                    You are not connected to the server...trying to reconnect. Wait a moment and try again. If this persists, refresh page.
                   </Alert>
                 </Snackbar>
               </Paper>

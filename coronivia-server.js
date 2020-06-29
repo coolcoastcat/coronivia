@@ -847,7 +847,6 @@ class GameRoom{
     let gameEnded = (this.rounds === this.currentRoundNumber)? true : false;
 
     logger.debug("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
-
     io.to(this.roomName).emit('round-end',{playerArray: this.getPlayerInfo(), gameEnded:gameEnded});
     
     let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
@@ -865,7 +864,9 @@ class GameRoom{
 
     let winningPlayerArray = this.getWinners();
     logger.debug("sending winner array:")
-    logger.debug(winningPlayerArray);
+    
+    let gameRoom = gameRoomArray[this.roomName];
+    logger.info("Final scores for "+gameRoom.roomName+" "+JSON.stringify(gameRoom.getPlayerInfo()));
     io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
     logger.debug('Pausing for a second before game cleanup for '+gameRoom.roomName);
     
