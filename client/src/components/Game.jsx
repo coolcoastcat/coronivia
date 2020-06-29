@@ -315,7 +315,7 @@ class Game extends React.Component{
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
         waitingButtons = <Box>
-        <Button type="submit" size="small" variant="contained" className={classes.colorfulButton}  onClick={this.handleStartGame}>
+        <Button size="small" variant="contained" className={classes.colorfulButton}  onClick={this.handleStartGame}>
         Start Game</Button>&nbsp;
         <Button onClick={()=>this.setState({confirmCancel: true})}
                   type="button" 
