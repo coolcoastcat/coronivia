@@ -4,10 +4,25 @@ An open source, online trivia game that friends can play casual trivia games whi
 ## Releases
 __v0.0.8 - Current__
 Bug fixes
-* 
+* #[42](https://github.com/coolcoastcat/coronivia/issues/42) - Socket closure on Game component unload
+* #[50](https://github.com/coolcoastcat/coronivia/issues/50) - AlertDialog allows licking outside the window to close, leaving blank screen
+* #[52](https://github.com/coolcoastcat/coronivia/issues/52) - Submit answer without clicking radio explodes
+* #[56](https://github.com/coolcoastcat/coronivia/issues/56) - On Game start, check if user's socket is disconnected and reconnect
 
 Enhancements
-* 
+* #[16](https://github.com/coolcoastcat/coronivia/issues/16) - Under advanced game options allow an answer 5, which randomly picks one of the other 4 answers.
+* #[20](https://github.com/coolcoastcat/coronivia/issues/20 ) - Add winston or pino logging to coronivia-server.js
+* #[24](https://github.com/coolcoastcat/coronivia/issues/24) - Enable Advanced option for Owner to set question timeout 
+* #[35](https://github.com/coolcoastcat/coronivia/issues/35) - Make question countdown seconds configurable as an advanced option.
+* #[39](https://github.com/coolcoastcat/coronivia/issues/39) - Add a trophy icon to the winner's dialog 
+* #[47](https://github.com/coolcoastcat/coronivia/issues/47) - Log game data to server log file
+* #[51](https://github.com/coolcoastcat/coronivia/issues/51) - Clean up coronivia-server.js logging
+* #[53](https://github.com/coolcoastcat/coronivia/issues/53) - When last user leaves the game, remove game from server. 
+* #[54](https://github.com/coolcoastcat/coronivia/issues/54) - Show player list scores on the winners screen
+* #[57](https://github.com/coolcoastcat/coronivia/issues/57) - Make question text smaller for more optimal mobile display
+* #[58](https://github.com/coolcoastcat/coronivia/issues/58) - Enable submit when clicking radio 
+* #[59](https://github.com/coolcoastcat/coronivia/issues/59) - Sort player list by descending score
+
 
 Known Issues
 * [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)

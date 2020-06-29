@@ -25,6 +25,7 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   SERVER_URI = config.PROD_SERVER_URI;
 }
 
+
 function Alert(props) {
   return <MuiAlert elevation={6} variant="filled" {...props} />;
 }
@@ -175,10 +176,7 @@ class Game extends React.Component{
     
     
       this.socket.on('disconnect',(reason) => {
-        console.debug('event: disconnect reason: '+reason);
-        console.debug('Trying to reconnect socket'); 
-          this.socket.connect(); // manually reconnecting
-        
+ 
         console.debug("reason type: "+typeof(reason));
         let match = (reason === 'transport close') ? 'yes':'no';
         console.debug("did reason match 'transport close' ? "+match);
@@ -230,6 +228,7 @@ class Game extends React.Component{
     /*Called when game is cancelled or naturally ends*/
     handleEndGame = ()=>{
       this.setState({leaveGame:false, confirmLeave: false, gameStatus:'ENDED'});
+      goTo('home',"Thanks for Playing!","/");
       this.socket.close();
       console.debug("handleEndGame(): displaying final scores and closed socket");
     }
@@ -388,7 +387,7 @@ class Game extends React.Component{
         );
   
         case 'ENDED':
-          goTo({page: '/'},"Coronivia","/");
+          goTo('home',"Coronivia","/");
           return(
             <Paper>
               <Box style={{fontSize:'30px'}} m={2}>The game was cancelled. Final scores:</Box>

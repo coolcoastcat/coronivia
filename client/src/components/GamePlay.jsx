@@ -134,11 +134,10 @@ class GamePlay extends React.Component{
             @param data.winningPlayerArray The list of player(s) with the highest score
         */
         this.socket.on('game-ended',(data) =>{
-            console.debug('event: game-end with data: %o',data);
+            console.debug("About to call goTo");
+            console.debug("called goto");
             this.winningPlayerArray = data.winningPlayerArray;
             this.setState({showScores: false, showEndgame: true,countdownData: data});
-       
-    
         });
 
     }
@@ -276,3 +275,11 @@ class GamePlay extends React.Component{
 }
 
 export default withStyles(styles)(GamePlay);
+
+function goTo(page, title, url) {
+    if ("undefined" !== typeof window.history.pushState) {
+      window.history.pushState({page: page}, title, url);
+    } else {
+      window.location.assign(url);
+    }
+  }
