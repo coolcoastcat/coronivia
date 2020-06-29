@@ -16,32 +16,27 @@ const {LoggingWinston} = require('@google-cloud/logging-winston');
 
 const loggingWinston = new LoggingWinston();
 
-
-
 const logger = winston.createLogger({
   level: 'debug',
   format: winston.format.json(),
   defaultMeta: { service: 'user-service' },
   transports: [
-    //
-    // - Write all logs with level `error` and below to `error.log`
-    // - Write all logs with level `info` and below to `combined.log`
-    //
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
-    new winston.transports.File({ filename: 'combined.log', level: 'info' }),
-    new winston.transports.File({ filename: 'debug.log' }),
     new winston.transports.Console({ format: winston.format.simple()})
   ],
 });
 
+logger.info("Running in environment: "+process.env.NODE_ENV); 
 
-
-if (process.env.NODE_ENV === 'production') {
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development'){
+  logger.add(new winston.transports.File({ filename: 'error.log', level: 'error' }));
+  logger.add(new winston.transports.File({ filename: 'combined.log', level: 'info' }));
+  logger.add(new winston.transports.File({ filename: 'debug.log' }));
+} else {
   logger.add(loggingWinston);
 }
 
 // test the logging output
-console.error("console.error -> coronivia-server.js log initialization test.");
+logger.error("logger.error -> coronivia-server.js log initialization test.");
 console.log("console.log -> coronivia-server.js log initialization test.");
 console.debug("console.debug -> coronivia-server.js log initialization test.");
 
@@ -118,7 +113,7 @@ function handleNewSocketConnection(socket){
     logger.debug(data);
     let result = validateParams(["owner","rounds","questions","difficulty","categories"],data);
     if(!result.success){
-      console.error(result.messages); 
+      logger.error(result.messages); 
       callback({ success: false, error: result.messages});
       return;
     }
@@ -176,15 +171,15 @@ function handleNewSocketConnection(socket){
   */
   socket.on('join',(data,callback)=>{
     gameStats.playersJoined++; // log data
-    logger.debug('Handled join event with data %o',data);
+    logger.debug('Handled join event with data:'+ JSON.stringify(data));
     let result = validateParams(["roomname","player"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     if(!doesGameExist(data.roomname)){
-      console.error("Player: "+data.player+" attempted to join non-existant room: "+data.roomname);
+      logger.error("Player: "+data.player+" attempted to join non-existant room: "+data.roomname);
       callback({ success: false, error: 'No such roomname found: '+data.roomname});
       return;
     }
@@ -209,7 +204,7 @@ function handleNewSocketConnection(socket){
                           questionFive: game.questionFive,
                           players: game.getPlayerInfo()
       }
-      logger.debug("Sending gameConfig: %o",gameConfig);
+      logger.debug("Sending gameConfig: "+JSON.stringify(gameConfig));
       callback(gameConfig);
       // Tell everyone that the Players have changed
       io.to(data.roomname).emit('player-change',game.getPlayerInfo());
@@ -229,18 +224,18 @@ function handleNewSocketConnection(socket){
   */
   socket.on('remove-player',(data,callback)=>{
    
-    logger.debug('Handled remove-player event with data %o',data);
+    logger.debug('Handled remove-player event with data: '+JSON.stringify(data));
    
     let result = validateParams(["roomname","player"],data);
    
     if(!result.success){
-      console.error(result.messages);
+      logger.error(result.messages);
       callback({ success: false, error: result.messages});
       return;
     }
    
     if(!doesGameExist(data.roomname)){
-      console.error("Player "+data.player+" attempted to leave non-existant room: "+data.roomname);
+      logger.error("Player "+data.player+" attempted to leave non-existant room: "+data.roomname);
       callback({ success: false, error: 'No such roomname found: '+data.roomname});
       return;
     }
@@ -272,13 +267,13 @@ function handleNewSocketConnection(socket){
     gameStats.gamesCancelled++;
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     
     if(!isGameOwner(data.roomname, data.ownerID)){
-      console.error("roomname not found OR ownerID did not match with the room");
+      logger.error("roomname not found OR ownerID did not match with the room");
       callback({ success: false, error: 'no such roomname with ownerID found'});
       return;
     }
@@ -287,7 +282,7 @@ function handleNewSocketConnection(socket){
     io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
 
     if(!endGame(data.roomname, data.ownerID)){
-      console.error("Unable to remove game for some reason");
+      logger.error("Unable to remove game for some reason");
       callback({ success: false, error: 'unable to remove game...not sure why'});
       return;
     }
@@ -310,13 +305,13 @@ function handleNewSocketConnection(socket){
     // Validate room and owner id
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     
     if(!isGameOwner(data.roomname, data.ownerID)){
-      console.error("roomname not found OR ownerID did not match with the room");
+      logger.error("roomname not found OR ownerID did not match with the room");
       callback({ success: false, error: 'no such roomname with ownerID found'});
       return;
     }
@@ -349,13 +344,13 @@ function handleNewSocketConnection(socket){
     let result = validateParams(["gameRoomName","player","playerAnswer"],data);
    
     if(!result.success){
-      console.error(result.messages);
+      logger.error(result.messages);
       callback({ success: false, error: result.messages});
       return;
     }
    
     if(!doesGameExist(data.gameRoomName)){
-      console.error("Player "+data.player+" attempted to answer a question for non-existant room: "+data.gameRoomName);
+      logger.error("Player "+data.player+" attempted to answer a question for non-existant room: "+data.gameRoomName);
       callback({ success: false, error: 'No such roomname found: '+data.gameRoomName});
       return;
     }
@@ -365,7 +360,7 @@ function handleNewSocketConnection(socket){
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
     if(currentQuestion){
-      logger.debug("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      logger.debug("player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
       if(data.playerAnswer === currentQuestion.correctAnswer) {
         let points = currentQuestion.questionData.pointValue;
         gameRoom.getPlayer(data.player).updateScore(points);
@@ -390,13 +385,13 @@ function handleNewSocketConnection(socket){
  // Validate room and owner id
  result = validateParams(["roomname","ownerID"],data);
  if(!result.success){
-   console.error(result.messages)  
+   logger.error(result.messages)  
    callback({ success: false, error: result.messages});
    return;
  }
  
  if(!isGameOwner(data.roomname, data.ownerID)){
-   console.error("roomname not found OR ownerID did not match with the room");
+   logger.error("roomname not found OR ownerID did not match with the room");
    callback({ success: false, error: 'no such roomname with ownerID found'});
    return;
  }
@@ -413,7 +408,7 @@ gameRoom.startRound(gameRoom); // Start the next round
   ///////// Utility Socket Message Handlers /////////
    socket.on('error',(data) => {
     // Pop a dialog?
-    logger.debug("Error from client: %o",data);
+    logger.debug("Error from client: "+JSON.stringify(data));
   }
   );
 
@@ -730,7 +725,7 @@ class GameRoom{
     if(totalQuestions > gameStats.mostQuestionsPerGame){gameStats.mostQuestionsPerGame = totalQuestions; }
 
     const questions = TriviaDB.getTriviaQuestions(categories,(totalQuestions), difficulty);
-    console.debug("DEBUG getQuestions() -> received "+questions.length+" questions");
+    logger.debug("getQuestions -> received "+questions.length+" questions");
 
     // Create questionObjects out of the questions
     const questionObjArray = [];
@@ -787,8 +782,6 @@ class GameRoom{
   */
   hasMoreRounds(){
     let hasMore = (this.currentRoundNumber == this.rounds)? false : true ;
-    logger.debug("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
-      " this.rounds: "+this.rounds+" hasMore: "+hasMore);
     return hasMore;
   }
  
@@ -818,7 +811,7 @@ class GameRoom{
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
     let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
-    console.debug("Room "+ this.roomName + ": sending round "+currentRoundNumber+" of "+this.rounds+", question "+questionNumber+" of "+totalQuestions);
+    logger.debug("Room "+ this.roomName + ": sending round "+currentRoundNumber+" of "+this.rounds+", question "+questionNumber+" of "+totalQuestions);
     
     io.to(this.roomName).emit('question',data);
 
@@ -832,11 +825,10 @@ class GameRoom{
  sendAnswer(gameRoom){
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
-  // logger.debug("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
   try{
     io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
   } catch(err){
-    console.error('Caught error: '+err);
+    logger.error('Caught error: '+err);
   }
 
   let answerTitle = 'Answer';
@@ -979,12 +971,10 @@ class Question{
     };
     this.questionData.answers.push(this.correctAnswer);
     this.questionData.answers = shuffle(this.questionData.answers);
-    // console.debug("DEBUG: Successfully created question with questionData: %o",this.questionData);
 
   }
 
 }
-
 
 /* The Player class encapsulates all the aspects and attributes of the Player */
 class Player{
@@ -1007,160 +997,6 @@ class Player{
 
 ///////////////  API ENDPOINTS - START ///////////////
 
-/* /api/create-game Initializes a new game.
-@param: req.params.amount  optional The number of questions to retrieve per round.  Defaults to 10 if not specified.
-@param: req.params.rounds optional The number of rounds for which to receive questions. Defaults to 1 if not specified.
-@return: res.send sends JSON as a resonse to the call. No explicit return.
-*/
-app.get('/api/create-game', (req, res) => {
-  // logger.debug("my object: %o", req)
-  result = validateParams(["owner","rounds","questions","difficulty","categories"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages });
-    return;
-  }
-
-  var owner = req.query.owner;
-  logger.debug('Owner set to: ' + owner);
-
-
-  var questionsPerRound = req.query.questions;
-  if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS; }
-  logger.debug('Number of questions set to: ' + questionsPerRound);
-  
-  var rounds = req.query.rounds;
-  if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
-  logger.debug('Number of rounds set to: ' + rounds);
-
-
-  var pauseBetweenRounds = (req.query.pauseBetweenRounds) ? req.query.pauseBetweenRounds : false; 
-
-  var difficulty = req.query.difficulty;
-
-  // If the categories array is empty, set the category to General by default
-  var categories = (categories.length === 0)? [9]:req.query.categories;
-
-  // create a new game room with the supplied parameters and add it to the list of games
-  game = new GameRoom(owner,rounds,questionsPerRound,difficulty,pauseBetweenRounds, categories);
-
-  gameRoomArray[game.roomName] = game;
-  logger.debug("Room Created: %o",game);
-
-  res.send({ game_status: 'WAITING',rounds: rounds, questions: questionsPerRound, roomname: game.roomName, owner: owner, owner_id: game.ownerID });
-})
-
-/* /api/add-player Takes a GameRoom name a player name and adds the player to the game.
-  @param roomname The room to start playing.
-  @param player  The player name to add to the room.
-  @returns JSON game_status: If success, player is added to the room. If failed, error message.
-*/
-app.get('/api/add-player', (req, res) => {
-result = validateParams(["roomname","player"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages});
-  return;
-}
-if(!doesGameExist(req.query.roomname)){
-  console.error("roomname not found");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
-  return;
-}
-
-result = addPlayer(req.query.player,req.query.roomname,{connected:false});
-if(result.success){
-  const game = gameRoomArray[req.query.roomname];
-  res.send({ game_status: 'success',
-            room_name: req.query.roomname, 
-            player: req.query.player,
-            questions: game.questionCount,
-            difficulty: game.difficulty,
-            rounds: game.rounds,
-            roomname: game.roomName, 
-            owner: game.owner,
-            players: game.getPlayerInfo()
-          });
-} else {
-  res.status(400).send({ game_status: 'failed', error: result.message });
-}
-})
-
-
-/* /api/remove-player Takes a GameRoom name a player name and removes player from the game.
-  @param roomname The room to exit.
-  @param player  The player name to remove from the room.
-  @returns JSON game_status: If success, player is removed from the room. If failed, error message.
-*/
-app.get('/api/remove-player', (req, res) => {
-result = validateParams(["roomname","player"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-if(!doesGameExist(req.query.roomname)){
-  console.error("roomname not found");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
-  return;
-}
-removePlayer(req.query.player, req.query.roomname);
-res.send({ game_status: 'success',room_name: req.query.roomname, player: req.query.player });
-})
-
-
-
-/* /api/start-game Takes a GameRoom name and ownerID and moves it from the 'WAITING' state to 'PLAYING' state.
-  @param roomName The room to start playing.
-  @param ownerID  The ID to validate if this request comes from the room owner.
-  @returns JSON game_status: If success, GameRoom is set to PLAYING. If failed, error message.
-*/
-app.get('/api/start-game', (req, res) => {
-result = validateParams(["roomname","ownerID"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-
-if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-  console.error("roomname not found OR ownerID did not match with the room");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
-  return;
-}
-  // START THE GAME!
- gameRoomArray[req.query.roomname].gameState = 'PLAYING';
-
-logger.debug("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-res.send({ game_status: 'PLAYING',room_name: req.query.roomname });
-})
-
-/* /api/end-game Takes a GameRoom name and ownerID and removes the game from the server.
-  @param roomName The room to be removed.
-  @param ownerID  The ID to validate if this request comes from the room owner.
-  @returns JSON game_status: removed or failed. If success, room name. If failed, error message.
-*/
-app.get('/api/end-game', (req, res) => {
-result = validateParams(["roomname","ownerID"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-
-if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-  console.error("roomname not found OR ownerID did not match with the room");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
-  return;
-}
-if(!endGame(req.query.roomname, req.query.ownerID)){
-  console.error("Unable to remove game for some reason");
-  res.status(500).send({ game_status: 'failed', error: 'unable to remove game...not sure why' });
-  return;
-}
-logger.debug("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-res.send({ game_status: 'removed',room_name: req.query.roomname });
-})
 
 /* List all games on the server. Returns the room name, the create date, players and status */
 app.get('/api/list-games', (req, res) => {
@@ -1175,64 +1011,21 @@ roomIDs.forEach(id => {
   gameBrief["status"] = gameRoomArray[id].state;
   gameList.games.push(gameBrief);  
   });
-  logger.debug("/api/list-games called:\n %o",gameList);
+  logger.debug("/api/list-games called");
   res.send(gameList);
 })
 
-// DEBUG - REMOVE BEFORE PROD
-app.get('/api/dump-all-games', (req, res) => {
-  logger.debug("/api/dump-all-games called");
-  res.send({ gameRoomArray });
-})
 
-// DEBUG - REMOVE BEFORE PROD
+// Get a list of all socket connections for connected users
 app.get('/api/get-all-users', (req, res) => {
   logger.debug("/api/get-all-users called");
   res.send({ socketConnections });
 })
 
-// DEBUG - REMOVE BEFORE PROD
+//Get the Game Statistics
 app.get('/api/info', (req, res) => {
   logger.debug("/api/info called");
   res.send({gameStats});
-})
-
-// DEBUG - REMOVE BEFORE PROD
-app.get('/api/debug', (req, res) => {
-  logger.debug("/api/info called");
-  const debugLog = fs.readFileSync('debug.log').toString();
-  res.send({ debugLog });
-})
-
-// DEBUG - REMOVE BEFORE PROD
-app.get('/api/error', (req, res) => {
-  logger.debug("/api/error called");
-  const errorLog = fs.readFileSync('error.log').toString();
-  errorLog 
-  res.send({ errorLog });
-})
-
-// DEBUG - REMOVE BEFORE PROD
-/* Send an event to all clients */
-app.get('/api/send-event', (req, res) => {
-result = validateParams(["e","d"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ success: false, errors: result.messages });
-  return;
-}
-
-  logger.debug("/api/send-event called");
-  const roomIDs = Object.keys(gameRoomArray);
-  const event = req.query.e;
-  const queryData = JSON.parse(req.query.d);
-  logger.debug(queryData);
-  roomIDs.forEach(id => {
-    const gameRoom = gameRoomArray[id];
-    
-    io.to(gameRoom.roomName).emit(event,queryData);
-  });
-  res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
 })
 
 // Catch all route to send to the static React app

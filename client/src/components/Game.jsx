@@ -15,6 +15,8 @@ import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import config  from "./config";
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert from '@material-ui/lab/Alert';
 
 let SERVER_URI = null;
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -23,6 +25,9 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   SERVER_URI = config.PROD_SERVER_URI;
 }
 
+function Alert(props) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const styles = theme => ({
   colorfulButton: {
@@ -82,7 +87,8 @@ class Game extends React.Component{
         errorMsg: null,
         copied: false,
         confirmCancel: false,
-        confirmLeave: false
+        confirmLeave: false,
+        alertDisconnect: false
       };
       this.socket = props.socket;
       this.setUpEventHandlers();
@@ -97,6 +103,7 @@ class Game extends React.Component{
 
    componentDidMount() {
       window.addEventListener("beforeunload", this.onUnload);
+      console.log("Game componentDidMount");
    }
 
 
@@ -169,7 +176,15 @@ class Game extends React.Component{
     
       this.socket.on('disconnect',(reason) => {
         console.debug('event: disconnect reason: '+reason);
+        console.debug('Trying to reconnect socket'); 
+          this.socket.connect(); // manually reconnecting
+        
+        console.debug("reason type: "+typeof(reason));
+        let match = (reason === 'transport close') ? 'yes':'no';
+        console.debug("did reason match 'transport close' ? "+match);
+
         if(reason === 'transport close') {
+          console.debug('Trying to reconnect socket'); 
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
           this.socket.disconnect(true);
@@ -190,7 +205,14 @@ class Game extends React.Component{
   
     /* Handles the button click to start the game! */
     handleStartGame = ()=>{
-    console.debug("DEBUG handleStartGame() called with object this: %o",this);
+
+    console.debug("DEBUG handleStartGame() called for game: "+this.gameConfig.roomname);
+    if(!this.socket.connected){ // check to see if the socket got disconnected. This happens on mobile devices when the browser is backgrounded
+      this.setState({alertDisconnect: true});
+      console.debug("Reconnecting socket to server on Start Game");
+      this.socket.connect(); // manually reconnecting
+    }
+
      this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
               (data)=>{
                 if(data.success){
@@ -198,6 +220,11 @@ class Game extends React.Component{
                 } 
                   else {this.handleError(data.error);}
               });
+    }
+
+    /* Called when snackbar is closed */
+    handleAlertClose = () => {
+      this.setState({alertDisconnect: false});
     }
   
     /*Called when game is cancelled or naturally ends*/
@@ -251,6 +278,7 @@ class Game extends React.Component{
   
     render() {
       const { classes } = this.props;
+
 
       if(this.state.leaveGame){
         return <Redirect to='/' />
@@ -338,11 +366,14 @@ class Game extends React.Component{
                     <Box p={1}><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
                   </Paper>
                 </Grid>
-
               
               
               </Grid>
-            
+                 <Snackbar open={this.state.alertDisconnect} autoHideDuration={3000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="warning">
+                    You are not connected to the server...trying to reconnect. Wait a moment and try again.
+                  </Alert>
+                </Snackbar>
               </Paper>
               </Grid>
             </Grid>
