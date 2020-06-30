@@ -7,6 +7,7 @@ import DialogContentText from '@material-ui/core/DialogContentText';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import Box from '@material-ui/core/Box';
 import TimerSpinner from "./timer-spinner";
+import Grid from '@material-ui/core/Grid';
 
 
 
@@ -50,8 +51,11 @@ export default function QuestionDialog(props) {
         {(props.dialogTitle !== '') && <DialogTitle id="form-dialog-title">{props.dialogTitle}</DialogTitle> }
         <DialogContent>
         {(props.timerText !== '') &&
-          <DialogContentText component={'span'}   style={{fontSize:'30px', verticalAlign: 'middle'}}>
-            {props.timerText} <TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} />
+          <DialogContentText component={'span'}   style={{fontSize:'30px'}}>
+            <Grid container spacing={2} justify="center">
+              <Grid item xs={10}>{props.timerText}</Grid> 
+              <Grid item xs={2}><TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} /></Grid>
+            </Grid>
           </DialogContentText>
         }
           <Box style={{ fontFamily: 'sans-serif'}}>

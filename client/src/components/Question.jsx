@@ -103,6 +103,13 @@ const styles = theme => ({
     },
     sans: {
         fontFamily: 'sans-serif'     
+    },
+    sent: {
+        fontWeight:"fontWeightBold",
+        background: '#f5f5c1'
+    },
+    notsent: {
+
     }
   });
 
@@ -139,6 +146,7 @@ class Question extends React.Component {
             randomAnswerLabel: null
 
         };
+        this.radios = [];
         this.questionFive = props.questionFive;
         this.socket = props.socket;
         this.setupEventHandlers();
@@ -206,9 +214,8 @@ class Question extends React.Component {
 
     render(){
         const { classes } = this.props;
-        let radios = '';
 
-        if(this.state.submittedAnswer || this.state.showAnswer){
+        if(this.state.showAnswer){
             let answerStyle = classes.none;
             const qObj = this.state.questionObject;
              if(this.state.showAnswer){
@@ -268,17 +275,20 @@ class Question extends React.Component {
             const qObj = this.state.questionObject;
             if(qObj.answers){
 
-                radios = qObj.answers.map((answer)=>
-                    <FormControlLabel  key={answer} value={answer} control={<Radio  color="primary" />} label={renderHTML(answer)} color="primary" />
+                this.radios = qObj.answers.map((answer)=> {
+                    let sent = (this.state.playerAnswer && this.state.playerAnswer === answer) ? 'SENT: ': '';
+                    let style = (this.state.playerAnswer && this.state.playerAnswer === answer) ? classes.sent:classes.notsent;
+                     return <FormControlLabel className={style}  key={answer} value={answer} control={<Radio  color="primary" />} label={sent+renderHTML(answer)} color="primary" />
+                    }
                 );
 
-                if(this.questionFive){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
+                if(this.questionFive && !this.state.submittedAnswer){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
                     if(!this.state.randomAnswer || this.state.randomAnswer === ''){ // if a random answer hasn't been initialized, do so
                         this.setState({randomAnswerLabel: getQuestionFiveTitle()});
                         this.setState({randomAnswer: qObj.answers[Math.floor(Math.random() * qObj.answers.length)] });
                     }
                     // For every state refresh, re-add this option to the answer array
-                    radios.push(<FormControlLabel  key={'rand_'+this.state.randomAnswer} value={this.state.randomAnswer} control={<Radio  color="primary" />} label={this.state.randomAnswerLabel} color="primary" />);
+                    this.radios.push(<FormControlLabel  key={'rand_'+this.state.randomAnswer} value={this.state.randomAnswer} control={<Radio  color="primary" />} label={this.state.randomAnswerLabel} color="primary" />);
                 }
             }
             return(
@@ -291,7 +301,7 @@ class Question extends React.Component {
                         <FormControl component="fieldset">
                         <FormLabel className={classes.question} component="legend" >{renderHTML(qObj.question)}</FormLabel>
                         <RadioGroup aria-label="playerAnswer" name="playerAnswer" value={this.state.playerAnswer} onChange={this.handleSubmitAnswer}>
-                        {radios}
+                        {this.radios}
                         </RadioGroup>
                         </FormControl>
                     </Box>

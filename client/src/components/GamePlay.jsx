@@ -61,7 +61,7 @@ class GamePlay extends React.Component{
         /* Handles a new question */
         this.socket.on('question',(data)=>{
             console.debug("Received question event with data: %o", data);
-            this.setState({question:data,showScores:false,showQuestion:true, interval:data.interval});
+            this.setState({question:data,showScores:false,showQuestion:true, interval:data.interval,timerText:data.timerMessage});
             this.questionElement.current.setQuestion(data);
         });
 
@@ -212,7 +212,7 @@ class GamePlay extends React.Component{
             return(
                 <Box>
                     <QuestionDialog showQuestion={this.state.showQuestion} 
-                                    timerText={this.state.timerText} 
+                                    timerText={(this.state.timerText)? this.state.timerText: ' '} 
                                     dialogTitle={this.state.questionDialogTitle} 
                                     count={(this.state.countdownData  && this.state.countdownData.count)?this.state.countdownData.count: 0}
                                     interval={this.state.interval?this.state.interval:1}

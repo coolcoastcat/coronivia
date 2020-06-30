@@ -810,7 +810,12 @@ class GameRoom{
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
-    let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
+    let data = { currentRoundNumber: currentRoundNumber, 
+                  questionNumber: questionNumber, 
+                  totalQuestions: totalQuestions, 
+                  question: question.questionData, 
+                  timerMessage: questionTitle
+                };
     logger.debug("Room "+ this.roomName + ": sending round "+currentRoundNumber+" of "+this.rounds+", question "+questionNumber+" of "+totalQuestions);
     
     io.to(this.roomName).emit('question',data);
