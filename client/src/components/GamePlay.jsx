@@ -17,6 +17,10 @@ const styles = theme => ({
       color: 'white',
       height: 48,
       padding: '0 30px',
+    },
+    borderBox: {
+        border: 1,
+        margin: '5px 2px'
     }
   });
 
@@ -44,7 +48,11 @@ class GamePlay extends React.Component{
         this.setUpEventHandlers();
         this.playerListElement = React.createRef(); // Allow sending updates to child
         this.questionElement = React.createRef(); // Allow updating question in child
-        this.handleLeaveGame = this.handleLeaveGame.bind(this);
+    }
+
+    /* Clean up the socket */
+    componentWillUnmount() {
+        // this.socket.close();
     }
     
     /* Sets up the event handlers for playing the game */
@@ -59,7 +67,9 @@ class GamePlay extends React.Component{
 
 
         this.socket.on('round-end',(data) =>{
-            this.setState({players: data.playerArray});
+            let tmpPlayers = data.playerArray;
+            tmpPlayers.sort((a,b)=> (a.score < b.score)? 1: (a.score === b.score) ? ((a.player > b.player)? 1 : -1) : -1);
+            this.setState({players: tmpPlayers});
             this.setState({gameEnded: data.gameEnded});
            // this.playerListElement.current.updatePlayers(this.state.players); // Update the child
             console.debug('event: round-end with data: %o',data);
@@ -124,19 +134,21 @@ class GamePlay extends React.Component{
             @param data.winningPlayerArray The list of player(s) with the highest score
         */
         this.socket.on('game-ended',(data) =>{
-            console.debug('event: game-end with data: %o',data);
+            console.debug("About to call goTo");
+            console.debug("called goto");
             this.winningPlayerArray = data.winningPlayerArray;
             this.setState({showScores: false, showEndgame: true,countdownData: data});
-       
-    
         });
 
     }
 
     /* Handles if a player leaves the game. Passed to QuestionDialog */
     handleLeaveGame = ()=>{  
-        this.setState({leaveGame:true});    
-        this.socket.close();
+        this.setState({leaveGame:true});
+        this.socket.emit('remove-player',{roomname: this.gameConfig.roomname, player: this.gameConfig.player},(data)=>{
+            console.debug('Player '+this.gameConfig.player+' leaving game result: %o',data);
+            this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
+        });
     };
 
     /* Handles when an owner clicks on the 'Next Round' button */
@@ -211,6 +223,7 @@ class GamePlay extends React.Component{
                         <Question gameRoomName={this.gameConfig.roomname} 
                                     thisPlayer={this.gameConfig.player} 
                                     socket={this.socket} 
+                                    questionFive={this.gameConfig.questionFive}
                                     ref={this.questionElement} /> 
                     </QuestionDialog>
                 </Box> 
@@ -230,6 +243,12 @@ class GamePlay extends React.Component{
                                     leaveCallback={this.handleLeaveGame}
                                     >
                         <WinnerList leaveGame={this.handleLeaveGame}  winners={this.winningPlayerArray} />
+                        <Box p={2} style={{border: "1px solid black", margin: '5px 2px'}}  >
+                            <PlayerListScores players={this.state.players} 
+                                        ref={this.playerListElement}
+                                        showScore={true} />
+                        </Box>
+                         <Box p={2}  style={{ margin: '5px 2px', padding: '0px' }}><Button className={classes.colorfulButton}  onClick={this.handleLeaveGame} >The End</Button></Box>
                     </QuestionDialog>
                 </Box> 
                 );
@@ -256,3 +275,11 @@ class GamePlay extends React.Component{
 }
 
 export default withStyles(styles)(GamePlay);
+
+function goTo(page, title, url) {
+    if ("undefined" !== typeof window.history.pushState) {
+      window.history.pushState({page: page}, title, url);
+    } else {
+      window.location.assign(url);
+    }
+  }

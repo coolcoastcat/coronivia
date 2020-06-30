@@ -15,6 +15,8 @@ import TextField from '@material-ui/core/TextField';
 import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import config  from "./config";
+import Snackbar from '@material-ui/core/Snackbar';
+import MuiAlert from '@material-ui/lab/Alert';
 
 let SERVER_URI = null;
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
@@ -23,6 +25,10 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   SERVER_URI = config.PROD_SERVER_URI;
 }
 
+
+function Alert(props) {
+  return <MuiAlert elevation={6} variant="filled" {...props} />;
+}
 
 const styles = theme => ({
   colorfulButton: {
@@ -82,7 +88,8 @@ class Game extends React.Component{
         errorMsg: null,
         copied: false,
         confirmCancel: false,
-        confirmLeave: false
+        confirmLeave: false,
+        alertDisconnect: false
       };
       this.socket = props.socket;
       this.setUpEventHandlers();
@@ -97,14 +104,17 @@ class Game extends React.Component{
 
    componentDidMount() {
       window.addEventListener("beforeunload", this.onUnload);
+      console.log("Game componentDidMount");
    }
 
 
      /* Clean up once the game is unmounted */
      componentWillUnmount() {
       window.removeEventListener("beforeunload", this.onUnload);
-       console.log('Closing socket');
-      this.socket.close();
+      console.log('Closing game socket on Game componentWillUnmount');
+      if(this.socket.connected){
+        this.socket.close();
+      }
      }
   
      /* Method bound to CreateGame reference so that Parent can pass in updates to the playerArray and force a refresh 
@@ -166,8 +176,13 @@ class Game extends React.Component{
     
     
       this.socket.on('disconnect',(reason) => {
-        console.debug('event: disconnect from server for reason: '+reason);
-        if(reason === 'transport closed') {
+        
+        console.debug("disconnect reason: "+reason);
+        let match = (reason === 'transport close') ? 'yes':'no';
+        console.debug("did reason match 'transport close' ? "+match);
+
+        if(reason === 'transport close') {
+          console.debug('Trying to reconnect socket'); 
           this.socket.connect(); // manually reconnecting
         } if(reason === 'io server disconnect') {
           this.socket.disconnect(true);
@@ -188,7 +203,14 @@ class Game extends React.Component{
   
     /* Handles the button click to start the game! */
     handleStartGame = ()=>{
-    console.debug("DEBUG handleStartGame() called with object this: %o",this);
+
+    console.debug("DEBUG handleStartGame() called for game: "+this.gameConfig.roomname);
+    if(!this.socket.connected){ // check to see if the socket got disconnected. This happens on mobile devices when the browser is backgrounded
+      this.setState({alertDisconnect: true});
+      console.debug("Reconnecting socket to server on Start Game");
+      this.socket.connect(); // manually reconnecting
+    }
+
      this.socket.emit('start-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},
               (data)=>{
                 if(data.success){
@@ -197,10 +219,16 @@ class Game extends React.Component{
                   else {this.handleError(data.error);}
               });
     }
+
+    /* Called when snackbar is closed */
+    handleAlertClose = () => {
+      this.setState({alertDisconnect: false});
+    }
   
     /*Called when game is cancelled or naturally ends*/
     handleEndGame = ()=>{
       this.setState({leaveGame:false, confirmLeave: false, gameStatus:'ENDED'});
+      goTo('home',"Thanks for Playing!","/");
       this.socket.close();
       console.debug("handleEndGame(): displaying final scores and closed socket");
     }
@@ -216,10 +244,10 @@ class Game extends React.Component{
 
         console.debug("cancelling the game");
         this.socket.emit('cancel-game',{roomname: this.gameConfig.roomname, ownerID: this.gameConfig.ownerID},(data)=>{
-        console.debug('Cancel game result: %o',data);
+          console.debug('Cancel game result: %o',data);
         if(!data.success){ this.handleError(data.error); } 
-       
         });
+        this.setState({leaveGame:true, confirmLeave: false, gameStatus:'ENDED'});
     }
   
     /* Handles the button click to start the game! */
@@ -250,6 +278,7 @@ class Game extends React.Component{
     render() {
       const { classes } = this.props;
 
+
       if(this.state.leaveGame){
         return <Redirect to='/' />
       }
@@ -279,14 +308,14 @@ class Game extends React.Component{
       }
       
       let headerMessage = 'Welcome to Game Room: '+this.gameConfig.roomname+'!';
-      let waitingButtons = <p><Button onClick={()=>this.setState({confirmLeave: true})}
+      let waitingButtons = <Button onClick={()=>this.setState({confirmLeave: true})}
                   type="button" 
-                  variant="outlined" >Leave the Game</Button></p>;
+                  variant="outlined" >Leave the Game</Button>;
   
       if(this.gameConfig.ownerID){
         headerMessage ='Game Room: '+this.gameConfig.roomname+' was Created!';
         waitingButtons = <Box>
-        <Button type="submit" size="small" variant="contained" className={classes.colorfulButton}  onClick={this.handleStartGame}>
+        <Button size="small" variant="contained" className={classes.colorfulButton}  onClick={this.handleStartGame}>
         Start Game</Button>&nbsp;
         <Button onClick={()=>this.setState({confirmCancel: true})}
                   type="button" 
@@ -322,23 +351,28 @@ class Game extends React.Component{
               <TextField id="gameroom" label='Share this link' variant='outlined' value={gameURL} style={{  minWidth: 200}} size='small' />
               {clipboardIcon}
               </Box>
+              <Box p={2}>{waitingButtons}</Box>
               <Grid justify="center" container>
                 
+              <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
+                  <Paper  elevation={3}>
+                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
+                  </Paper>
+                </Grid>
+
                 <Grid item sm={6}  style={{ padding: '5px'}} >
                   <Paper elevation={3}>
                     <Box p={1}><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
                   </Paper>
                 </Grid>
-
-                <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
-                  <Paper  elevation={3}>
-                    <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
-                  </Paper>
-                </Grid>
+              
               
               </Grid>
-              
-              <Box p={2}>{waitingButtons}</Box>
+                 <Snackbar open={this.state.alertDisconnect} autoHideDuration={3000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="warning">
+                    You are not connected to the server...trying to reconnect. Wait a moment and try again. If this persists, refresh page.
+                  </Alert>
+                </Snackbar>
               </Paper>
               </Grid>
             </Grid>
@@ -353,7 +387,7 @@ class Game extends React.Component{
         );
   
         case 'ENDED':
-          goTo({page: '/'},"Coronivia","/");
+          goTo('home',"Coronivia","/");
           return(
             <Paper>
               <Box style={{fontSize:'30px'}} m={2}>The game was cancelled. Final scores:</Box>

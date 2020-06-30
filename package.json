@@ -13,9 +13,13 @@
     "client": "cd client && yarn start",
     "server": "nodemon coronivia-server.js",
     "package": "cd client && yarn build && cd .. && cp -r client/build/* ./public",
-    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\""
+    "dev": "concurrently --kill-others-on-fail \"yarn server\" \"yarn client\"",
+    "debug": "DEBUG=* concurrently --kill-others-on-fail \"yarn server\" \"yarn client\"",
+    "deploy": "yarn package && gcloud --quiet app deploy"
   },
   "dependencies": {
+    "@google-cloud/logging-winston": "^3.0.6",
+    "@material-ui/lab": "^4.0.0-alpha.56",
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
     "express": "^4.16.4",
@@ -23,7 +27,8 @@
     "pouchdb": "^7.2.1",
     "pouchdb-find": "^7.2.1",
     "socket.io": "^2.3.0",
-    "uuid": "^8.1.0"
+    "uuid": "^8.1.0",
+    "winston": "^3.3.3"
   },
   "engines": {
     "node": ">=10.0.0"

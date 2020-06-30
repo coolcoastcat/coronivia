@@ -2,7 +2,32 @@
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
 ## Releases
-__v0.0.7 - Current__
+__v0.0.8 - Current__
+Bug fixes
+* #[42](https://github.com/coolcoastcat/coronivia/issues/42) - Socket closure on Game component unload
+* #[50](https://github.com/coolcoastcat/coronivia/issues/50) - AlertDialog allows licking outside the window to close, leaving blank screen
+* #[52](https://github.com/coolcoastcat/coronivia/issues/52) - Submit answer without clicking radio explodes
+* #[56](https://github.com/coolcoastcat/coronivia/issues/56) - On Game start, check if user's socket is disconnected and reconnect
+
+Enhancements
+* #[16](https://github.com/coolcoastcat/coronivia/issues/16) - Under advanced game options allow an answer 5, which randomly picks one of the other 4 answers.
+* #[20](https://github.com/coolcoastcat/coronivia/issues/20 ) - Add winston or pino logging to coronivia-server.js
+* #[24](https://github.com/coolcoastcat/coronivia/issues/24) - Enable Advanced option for Owner to set question timeout 
+* #[35](https://github.com/coolcoastcat/coronivia/issues/35) - Make question countdown seconds configurable as an advanced option.
+* #[39](https://github.com/coolcoastcat/coronivia/issues/39) - Add a trophy icon to the winner's dialog 
+* #[47](https://github.com/coolcoastcat/coronivia/issues/47) - Log game data to server log file
+* #[51](https://github.com/coolcoastcat/coronivia/issues/51) - Clean up coronivia-server.js logging
+* #[53](https://github.com/coolcoastcat/coronivia/issues/53) - When last user leaves the game, remove game from server. 
+* #[54](https://github.com/coolcoastcat/coronivia/issues/54) - Show player list scores on the winners screen
+* #[57](https://github.com/coolcoastcat/coronivia/issues/57) - Make question text smaller for more optimal mobile display
+* #[58](https://github.com/coolcoastcat/coronivia/issues/58) - Enable submit when clicking radio 
+* #[59](https://github.com/coolcoastcat/coronivia/issues/59) - Sort player list by descending score
+
+
+Known Issues
+* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
+
+__v0.0.7__
 Bug fixes
 * Cleaned up unused files
 * Resolved linting complaints
@@ -144,26 +169,10 @@ Start the application with:
 This work is licensed under a [Creative Commons Attribution-ShareAlike 4.0 International License](http://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Attribution
-This application leverages the following projects:
-* [The Open Trivia Database](https://opentdb.com/)
+This application leverages the trivia database from the [The Open Trivia Database](https://opentdb.com/). It releases the source under [the same license](http://creativecommons.org/licenses/by-sa/4.0/).
+Slight changes have been made to the trivia questions to organize categories in a more user friendly hierarchy of category and sub-category. All questions
+have been extracted to [opentdb_questions.json](https://github.com/coolcoastcat/coronivia/blob/master/opentdb_questions.json), which contains a brief 
+attribution of the questions origin. This attribution should be perpetuated in any derived works using these trivia questions.
 
 ## Ideas Parking lot
-* SECURITY: Set a GUID in a cookie for the user. Submit with client API calls to see if this is the same user that joined a game on rejoining.
-* FEATURE: Chat component for the game room?
-* FEATURE: Add copy to clipboard icon next to room URL
-* FEATURE: Questions from the API come in easy, medium and hard.  Have different point values for each question type.
-* FEATURE: Running total of player points. - IMPLEMENTED
-* FEATURE: Running total of top N players scores. 
-* FEATURE: Ability to set question countdown period.
-* FEATURE: Ability to set pause at end of Round to have owner click continue (reverts to auto if owner leaves).
-* FEATURE: Ability to define different categories for different rounds.
-* FEATURE: Ability for Owner to apply a theme to the game
-* FEATURE: Show total number of games being played on this server on the landing page
-* FEATURE: Allow people to spectate and not play
-* AUDIT: Log game data to a server log file.
-* SCALABILITY: On owner connection to create game, implement a game-check event, to test if game still exists on server
-* FEATURE: Add copy-to-clipboard feature next to URL in Waiting room
-* FEATURE: Allow owner to set the maximum number of players
-* FEATURE: Implement a score based on the timer 
-    * Start with a base score of say 15 and remove answers every five seconds
-    * Score drops by five points and finally the answer is all that remains
+* All ideas have been created as [GitHub issues](https://github.com/coolcoastcat/coronivia/issues)

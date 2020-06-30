@@ -62,6 +62,8 @@ class PlayerListScores extends React.Component{
         @param playerArray The updated player array to show.
     */
     updatePlayers(playerArray){
+        // Sort by player score
+        playerArray.sort((a,b)=> (a.score < b.score)? 1: (a.score === b.score) ? ((a.player > b.player)? 1 : -1) : -1);
         this.setState({players: playerArray});
         console.debug("PlayersList received players update %o",playerArray);
     }
@@ -69,12 +71,13 @@ class PlayerListScores extends React.Component{
     /* alternating row styling */
     getClass(index){
         const { classes } = this.props;
-        return (index %2 === 0 )  ? classes.content : classes.contentGray;
+        return (index %2 === 0 )  ? classes.contentGray : classes.content;
     }
 
     render(){
         let playerItems = '';
         const { classes } = this.props;
+
         console.debug("DEBUG: Players array: %o",this.state.players)
         if(this.state.players){
             playerItems = this.state.players.map((player,index) => {

@@ -94,32 +94,38 @@ exports.getTriviaQuestions = function (categoryArray,questionCount,difficulty){
 
     let questionsPerCategory = Math.floor(questionCount / categoryArray.length);
     let remainderQuestions = questionCount % categoryArray.length;
-    
-    let count = 0;
 
-    // iterate over each category and get some randomized questions
-    categoryArray.forEach((category)=>{
-        // test if category exists
-        if(!allQuestions.categories[category]){
-            consol.error("ERROR -> bad category received: "+category);
-            return;
-        }
-        let questionsToRetrieve = questionsPerCategory;
-        // on the first pass, boost the number of questions to retrieve with the remainder from above
-        if(count++ === 0){
-            questionsToRetrieve += remainderQuestions;
-        }
+    // handle any remainders first, which may be all there are if fewer questions are requested than categories
+    let i = 0;
+    for(i;i<remainderQuestions;i++){
+        let tmpCategory = categoryArray[i];
+        allQuestions.categories[tmpCategory][difficulty] = shuffle(allQuestions.categories[tmpCategory][difficulty]);
+        questions.push(allQuestions.categories[tmpCategory][difficulty][0]);
+    }
 
-        // Randomize the questions 
-        allQuestions.categories[category][difficulty] = shuffle(allQuestions.categories[category][difficulty]);
-        let i = 0;
-        for(i;i<questionsToRetrieve;i++){
-            let question = allQuestions.categories[category][difficulty][i];
-            if(!question){ return;}
-            questions.push(question);
-        }
+    if(questionsPerCategory !==0 ){ // we're done, return questions array
+        console.debug('More questions than categories');
 
-    });
+        // iterate over each category and get some randomized questions
+        categoryArray.forEach((category)=>{
+            // test if category exists
+            if(!allQuestions.categories[category]){
+                console.error("ERROR -> bad category received: "+category);
+                return;
+            }
+            let questionsToRetrieve = questionsPerCategory;
+
+            // Randomize the questions 
+            allQuestions.categories[category][difficulty] = shuffle(allQuestions.categories[category][difficulty]);
+            let i = 0;
+            for(i;i<questionsToRetrieve;i++){
+                let question = allQuestions.categories[category][difficulty][i];
+                if(!question){ return;}
+                questions.push(question);
+            }
+
+        });
+    }
     console.log("put "+questions.length+ " questions into return array which should match requested questions: "+questionCount);
     questions = shuffle(questions);
     return questions;

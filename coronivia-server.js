@@ -7,8 +7,64 @@ const http = require('http');
 const socketIo = require("socket.io/lib");
 const path = require('path');
 const TriviaDB = require('./trivia-questions');
+const winston = require('winston');
+const fs = require('fs');
 
-const gameRoomArray = {};
+
+// Imports the Google Cloud client library for Winston
+const {LoggingWinston} = require('@google-cloud/logging-winston');
+
+const loggingWinston = new LoggingWinston();
+
+const logger = winston.createLogger({
+  level: 'debug',
+  format: winston.format.json(),
+  defaultMeta: { service: 'user-service' },
+  transports: [
+    new winston.transports.Console({ format: winston.format.simple()})
+  ],
+});
+
+logger.info("Running in environment: "+process.env.NODE_ENV); 
+
+if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development'){
+  logger.add(new winston.transports.File({ filename: 'error.log', level: 'error' }));
+  logger.add(new winston.transports.File({ filename: 'combined.log', level: 'info' }));
+  logger.add(new winston.transports.File({ filename: 'debug.log' }));
+} else {
+  logger.add(loggingWinston);
+}
+
+// test the logging output
+logger.error("logger.error -> coronivia-server.js log initialization test.");
+console.log("console.log -> coronivia-server.js log initialization test.");
+console.debug("console.debug -> coronivia-server.js log initialization test.");
+
+logger.error("winston logger.error -> coronivia-server.js log initialization test.");
+logger.info("winston logger.info -> coronivia-server.js log initialization test.");
+logger.debug("winston logger.debug -> coronivia-server.js log initialization test.");
+
+
+// Some meta objects for tracking objects and data across the server
+const gameRoomArray = {}; // All games are stored here
+const socketConnections = {}; // Tracking all socket connections
+const gameStats = { // games stats since the server started
+  gamesCreated: 0,
+  gamesPlayed: 0,
+  gamesCancelled: 0,
+  playersJoined: 0,
+  roundsPlayed: 0,
+  questionsAnswered: 0,
+  questionsServed: 0, 
+  gamesAbandoned: 0,
+  gamesFinished: 0,
+  mostPlayersPerGame: 0,
+  mostQuestionsPerGame: 0,
+  categoryFrequency: { 9:0, 10:0, 15:0, 17: 0, 20:0, 21:0, 22:0, 23:0, 24:0, 31:0},
+  pauseBetweenRounds: { no: 0, yes: 0},
+  seconds: {5: 0,10:0, 15:0, 20:0, 30:0},
+  questionFive: {yes:0, no: 0}
+}; 
 
 
 const app = express();
@@ -34,13 +90,12 @@ app.use(express.static(path.join(__dirname, "/public")));
 ///////////////  WEBSOCKET CONFIGURATION ///////////////
 const server = http.createServer(app);
 const io = socketIo(server); // setup the websocket
-const socketConnections = {}; // TODO: Determine if there is a use for tracking all sockets
+
 
 io.on('connection',handleNewSocketConnection);
 
 function handleNewSocketConnection(socket){
-  console.log('a user connected with socket.id: '+socket.id);
-  
+  logger.debug('a user connected with socket.id: '+socket.id);  
 
   ///////// Socket Message Handlers /////////
 
@@ -52,10 +107,13 @@ function handleNewSocketConnection(socket){
     @return All submitted params + game room name and ownerID
   */
   socket.on('create-game',(data,callback)=>{
-    console.log('Handled create-game event with data %o',data);
+    gameStats.gamesCreated++;
+
+    logger.debug('Handled create-game event with data:');
+    logger.debug(data);
     let result = validateParams(["owner","rounds","questions","difficulty","categories"],data);
     if(!result.success){
-      console.error(result.messages); 
+      logger.error(result.messages); 
       callback({ success: false, error: result.messages});
       return;
     }
@@ -65,28 +123,33 @@ function handleNewSocketConnection(socket){
 
     var questionsPerRound = data.questions;
     if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS;}
-    console.log('Number of questions set to: ' + questionsPerRound);
+    logger.debug('Number of questions set to: ' + questionsPerRound);
     
     let rounds = data.rounds;
     if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    console.log('Number of rounds set to: ' + rounds);
+    logger.debug('Number of rounds set to: ' + rounds);
 
-    let question = data.rounds;
-    if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS;}
-    console.log('Number of rounds set to: ' + rounds);
 
     let questionCountdown = data.questionCountdown ? data.questionCountdown : QUESTION_COUNTDOWN_DEFAULT;
+    gameStats.seconds[questionCountdown]++;
 
     let pauseBetweenRounds = data.pauseBetweenRounds ? data.pauseBetweenRounds : false;
+    (pauseBetweenRounds) ? gameStats.pauseBetweenRounds.yes++ : gameStats.pauseBetweenRounds.no++;
+
+    let questionFive = data.questionFive ? data.questionFive : false;
+    (questionFive) ? gameStats.questionFive.yes++ : gameStats.questionFive.no++;
 
       // If the categories array is empty, set the category to General by default
     let categories = (data.categories.length === 0) ? [9] : data.categories;
+    categories.forEach(category =>gameStats.categoryFrequency[category]++);
 
      // create a new game room with the supplied parameters and add it to the list of games
-    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,categories);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
  
      gameRoomArray[game.roomName] = game;
-     console.log("Room Created: %o",game);
+    
+     logger.info("Game created -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" qs/rnd: "+game.questionCount+
+                    " difficulty: "+game.difficulty+ " pauseBetweenRounds: "+game.pauseBetweenRounds+" questionFive: "+game.questionFive);
      callback({ success: true, 
                 gameStatus: 'WAITING',
                 rounds: game.rounds, 
@@ -97,6 +160,7 @@ function handleNewSocketConnection(socket){
                 player: owner,
                 ownerID: game.ownerID,
                 pauseBetweenRounds: game.pauseBetweenRounds,
+                questionFive: game.questionFive,
                 players: [] });
      });
 
@@ -106,15 +170,16 @@ function handleNewSocketConnection(socket){
     @emits player-change event to all in roomname 
   */
   socket.on('join',(data,callback)=>{
-    console.log('Handled join event with data %o',data);
+    gameStats.playersJoined++; // log data
+    logger.debug('Handled join event with data:'+ JSON.stringify(data));
     let result = validateParams(["roomname","player"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     if(!doesGameExist(data.roomname)){
-      console.error("Player: "+data.player+" attempted to join non-existant room: "+data.roomname);
+      logger.error("Player: "+data.player+" attempted to join non-existant room: "+data.roomname);
       callback({ success: false, error: 'No such roomname found: '+data.roomname});
       return;
     }
@@ -136,9 +201,10 @@ function handleNewSocketConnection(socket){
                           gameStatus: game.gameStatus,
                           ownerID: (data.player === game.owner)? game.ownerID : null,
                           pauseBetweenRounds: game.pauseBetweenRounds,
+                          questionFive: game.questionFive,
                           players: game.getPlayerInfo()
       }
-      console.log("Sending gameConfig: %o",gameConfig);
+      logger.debug("Sending gameConfig: "+JSON.stringify(gameConfig));
       callback(gameConfig);
       // Tell everyone that the Players have changed
       io.to(data.roomname).emit('player-change',game.getPlayerInfo());
@@ -158,18 +224,18 @@ function handleNewSocketConnection(socket){
   */
   socket.on('remove-player',(data,callback)=>{
    
-    console.log('Handled remove-player event with data %o',data);
+    logger.debug('Handled remove-player event with data: '+JSON.stringify(data));
    
     let result = validateParams(["roomname","player"],data);
    
     if(!result.success){
-      console.error(result.messages);
+      logger.error(result.messages);
       callback({ success: false, error: result.messages});
       return;
     }
    
     if(!doesGameExist(data.roomname)){
-      console.error("Player "+data.player+" attempted to leave non-existant room: "+data.roomname);
+      logger.error("Player "+data.player+" attempted to leave non-existant room: "+data.roomname);
       callback({ success: false, error: 'No such roomname found: '+data.roomname});
       return;
     }
@@ -178,10 +244,17 @@ function handleNewSocketConnection(socket){
     let game = gameRoomArray[data.roomname];
 
     if(removePlayerResult.success){
+      logger.debug("Successfully removed player "+data.player+" number of remaining players: "+game.players.length );
+
       if(game.players.length > 0){ // Only send an event if there is someone to send it to
         // Tell everyone that the Players have changed
         io.to(data.roomname).emit('player-change',game.getPlayerInfo());
         callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
+      } else {
+        // end the game since there is no one left!
+        logger.debug("All players have left game "+game.roomName+". Ending game.");
+        gameStats.gamesAbandoned++;
+        endGame(game.roomName, game.ownerID);
       }
     } else {
       // probably useless since the client already left...
@@ -191,15 +264,16 @@ function handleNewSocketConnection(socket){
   });
   
   socket.on('cancel-game',(data,callback) =>{
+    gameStats.gamesCancelled++;
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     
     if(!isGameOwner(data.roomname, data.ownerID)){
-      console.error("roomname not found OR ownerID did not match with the room");
+      logger.error("roomname not found OR ownerID did not match with the room");
       callback({ success: false, error: 'no such roomname with ownerID found'});
       return;
     }
@@ -208,13 +282,13 @@ function handleNewSocketConnection(socket){
     io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
 
     if(!endGame(data.roomname, data.ownerID)){
-      console.error("Unable to remove game for some reason");
+      logger.error("Unable to remove game for some reason");
       callback({ success: false, error: 'unable to remove game...not sure why'});
       return;
     }
   
     io.to(data.roomname).emit('game-cancelled',{success: true, message: data.roomname+' was removed'}); // cancel for all
-    console.log("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
+    logger.debug("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
    
     callback({ success: true, message: data.roomname+' was removed'});
   });
@@ -226,26 +300,32 @@ function handleNewSocketConnection(socket){
     @emits game-started to all players in roomname with no data 
   */
   socket.on('start-game',(data,callback) =>{
+
+
     // Validate room and owner id
     result = validateParams(["roomname","ownerID"],data);
     if(!result.success){
-      console.error(result.messages)  
+      logger.error(result.messages)  
       callback({ success: false, error: result.messages});
       return;
     }
     
     if(!isGameOwner(data.roomname, data.ownerID)){
-      console.error("roomname not found OR ownerID did not match with the room");
+      logger.error("roomname not found OR ownerID did not match with the room");
       callback({ success: false, error: 'no such roomname with ownerID found'});
       return;
     }
     gameRoom = gameRoomArray[data.roomname];
     gameRoom.gameStatus = 'PLAYING';
-    console.log('Starting game for room: '+data.roomname);
+    logger.debug('Starting game for room: '+data.roomname);
+    logger.info('Starting game -> '+data.roomname+' with players: '+gameRoom.players.length);
+    logger.info(gameRoom.getPlayerInfo());
     
-    
+    gameStats.gamesPlayed++;
+    gameStats.mostPlayersPerGame = ( gameRoom.players.length > gameStats.mostPlayersPerGame ) ? gameRoom.players.length : gameStats.mostPlayersPerGame;
+
     io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
-    console.log('Issued game-start event to Game Room: '+gameRoom.roomName);
+    logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
    
    // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
    gameRoom.startRound(gameRoom); // Start the 1st Round
@@ -259,16 +339,18 @@ function handleNewSocketConnection(socket){
     @param data.answer The selcted answer from the user
   */
   socket.on('player-answer',(data,callback) =>{
+    gameStats.questionsAnswered++;
+
     let result = validateParams(["gameRoomName","player","playerAnswer"],data);
    
     if(!result.success){
-      console.error(result.messages);
+      logger.error(result.messages);
       callback({ success: false, error: result.messages});
       return;
     }
    
     if(!doesGameExist(data.gameRoomName)){
-      console.error("Player "+data.player+" attempted to answer a question for non-existant room: "+data.gameRoomName);
+      logger.error("Player "+data.player+" attempted to answer a question for non-existant room: "+data.gameRoomName);
       callback({ success: false, error: 'No such roomname found: '+data.gameRoomName});
       return;
     }
@@ -278,16 +360,16 @@ function handleNewSocketConnection(socket){
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
     if(currentQuestion){
-      console.log("DEBUG player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      logger.debug("player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
       if(data.playerAnswer === currentQuestion.correctAnswer) {
         let points = currentQuestion.questionData.pointValue;
         gameRoom.getPlayer(data.player).updateScore(points);
         pointsEarned = points;
-        console.log("Player earned: "+points);
+        logger.debug("Player earned: "+points);
       }
       callback({success: true, points: pointsEarned});
     } else {
-      console.log("Player was too late answering question and no current question exists!");
+      logger.debug("Player was too late answering question and no current question exists!");
       callback({ success: false, error: 'Answer was too late!'});
     }
   
@@ -303,18 +385,18 @@ function handleNewSocketConnection(socket){
  // Validate room and owner id
  result = validateParams(["roomname","ownerID"],data);
  if(!result.success){
-   console.error(result.messages)  
+   logger.error(result.messages)  
    callback({ success: false, error: result.messages});
    return;
  }
  
  if(!isGameOwner(data.roomname, data.ownerID)){
-   console.error("roomname not found OR ownerID did not match with the room");
+   logger.error("roomname not found OR ownerID did not match with the room");
    callback({ success: false, error: 'no such roomname with ownerID found'});
    return;
  }
  gameRoom = gameRoomArray[data.roomname];
- console.log('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
+ logger.debug('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
  
 gameRoom.startRound(gameRoom); // Start the next round
 
@@ -326,21 +408,29 @@ gameRoom.startRound(gameRoom); // Start the next round
   ///////// Utility Socket Message Handlers /////////
    socket.on('error',(data) => {
     // Pop a dialog?
-    console.log("Error from client: %o",data);
+    logger.debug("Error from client: "+JSON.stringify(data));
   }
   );
 
   socket.on('disconnect',() => {
     
-    console.log('a user with socket.id: '+socket.id +' disconnected');
+    logger.debug('A user with socket.id: '+socket.id +' disconnected');
+
+
     const roomname =  socketConnections[socket.id];
-    
-    console.log('Sending players list update to room: '+roomname);
     const game = gameRoomArray[roomname];
-    if(game){ // make sure it still exists as a cancel game may have removed it
+    if(game && game.hasConnectedPlayers()){ // make sure it still exists as a cancel game may have removed it and it has active users
+       logger.debug('Sending players list update to room: '+roomname);
        io.to(roomname).emit('player-change',game.getPlayerInfo());
     }
     delete socketConnections[socket.id]; // Remove user from the users in rooms
+
+    // Remove the game is there are no connected users
+    // If game is in WAITING, user might disconnect when windowing on a mobile device and so allow that case
+    if(game && !game.hasConnectedPlayers() && game.gameStatus !== 'WAITING'){
+      logger.debug('On user disconnect, game '+game.roomName+' has no more active players. Removing.');
+      endGame(game.roomName,game.ownerID);
+    }
   });
 
 }
@@ -348,7 +438,7 @@ gameRoom.startRound(gameRoom); // Start the next round
 
 /* Start the server */
 const startTime = (new Date()).toTimeString();
-server.listen(port, () => console.log(`Listening on port ${port} at ${startTime}`));
+server.listen(port, () => logger.debug(`Listening on port ${port} at ${startTime}`));
 
 
 
@@ -364,8 +454,14 @@ server.listen(port, () => console.log(`Listening on port ${port} at ${startTime}
   @param callback Function to call once the countdown has elapsed
 */
 function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback){
+
+  // Check if room still exists. The game may have been cancelled and if so, we want to return, which will break the game cycle.
+  if(!gameRoomArray[roomName]){
+      logger.debug("No roomName: "+roomName +" found in createTimer(). The game has been cancelled so ending game cycle.");
+      return;
+  }
   
-  console.log('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + 'event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
+  logger.debug('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + ' event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
   let interval = secs; // Used for calculating the % time remaining on the client side
   let timer = setInterval(()=>{
     io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
@@ -406,13 +502,13 @@ function addPlayer(playerToAdd, roomname, socket){
     }
     result.message = "Reconnecting to previous session";
     player.socket = socket; // update the player's socket with new one
-    console.log("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
+    logger.debug("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
     return result;
   }
   
   var newPlayer = new Player(playerToAdd, roomname, socket); 
   gameRoomArray[roomname].players.push(newPlayer);
-  console.log("Player with name: "+playerToAdd+" added to game:"+roomname);
+  logger.debug("Player with name: "+playerToAdd+" added to game:"+roomname);
   result.message ='Player with name:'+playerToAdd+" added to game:"+roomname;
   return result;
 }
@@ -427,7 +523,7 @@ function removePlayer(playerToRemove, roomname){
 
   const filtered = gameRoomArray[roomname].players.filter(player => { return player.name !== playerToRemove});
   gameRoomArray[roomname].players = filtered;
-  console.log('Player '+playerToRemove+' removed from '+roomname);
+  logger.debug('Player '+playerToRemove+' removed from '+roomname);
   return result;
 }
 
@@ -484,9 +580,19 @@ function validateParams(params,query){
   @param ownerID  An ownerID to validate with this GameRoom
 */
 function endGame(roomName, ownerID){
-  if(!isGameOwner(roomName,ownerID)) { return false;} // checks for existence and ownership
+  if(!isGameOwner(roomName,ownerID)) { 
+      logger.debug("No game matched roomName: "+roomName+" ownerID: "+ownerID); 
+      return false;
+    } // checks for existence and ownership
+
+  const game = gameRoomArray[roomName];
+  logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
+              " players at end: "+game.players.length);
+  logger.info(game.getPlayerInfo());
+  logger.info(JSON.stringify(gameStats));
+
   delete gameRoomArray[roomName];
-  console.log("Removed game: "+roomName);
+  logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
   return true;
 }
 
@@ -519,7 +625,7 @@ function shuffle(array) {
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
 
-  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,categories) {
+  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
@@ -534,10 +640,26 @@ class GameRoom{
       this.currentRoundNumber = 0;
       this.questionCountdown = questionCountdown;
       this.pauseBetweenRounds = pauseBetweenRounds;
+      this.questionFive = questionFive;
 
       // This handles the case where we may have fewer questions per round than the user asked for
       this.rounds = this.gameRoundArray.length;
   }
+
+  /* Checks to see if there are players still connected to the game 
+    @return true if at least one connected player, false if no connected players
+  */
+  hasConnectedPlayers() { 
+    let hasConnected = false;
+    this.players.forEach(player =>{
+        if(player.socket.connected){
+          hasConnected = true;
+          return;
+        }
+    });
+    return hasConnected;
+  }
+
 
   /* Retrieves a player by name 
     @param playerName
@@ -599,8 +721,11 @@ class GameRoom{
   getQuestions(rounds,questionsPerRound,difficulty, categories){
 
     let totalQuestions = rounds * questionsPerRound;
+
+    if(totalQuestions > gameStats.mostQuestionsPerGame){gameStats.mostQuestionsPerGame = totalQuestions; }
+
     const questions = TriviaDB.getTriviaQuestions(categories,(totalQuestions), difficulty);
-    console.debug("DEBUG getQuestions() -> received "+questions.length+" questions");
+    logger.debug("getQuestions -> received "+questions.length+" questions");
 
     // Create questionObjects out of the questions
     const questionObjArray = [];
@@ -618,7 +743,7 @@ class GameRoom{
 
         // Check case if we ran out of questions
         if(start >= questions.length){ 
-          console.log("Ran out of questions for user selected criteria: \n"+
+          logger.debug("Ran out of questions for user selected criteria: \n"+
                       "  categories: "+categories+"\n"+
                       "  difficulty: "+difficulty+"\n"+
                       "  rounds: "+rounds+"\n"+
@@ -642,8 +767,10 @@ class GameRoom{
     //TODO: Check to see that at least one client is connected. Otherwise end the game and clean-up
 
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
+      gameStats.roundsPlayed++;
+
       let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
-      console.log("Starting " + roundTitle);
+      logger.debug("Starting " + roundTitle);
       createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,true,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
       gameRoom.endGame();
@@ -655,8 +782,6 @@ class GameRoom{
   */
   hasMoreRounds(){
     let hasMore = (this.currentRoundNumber == this.rounds)? false : true ;
-    console.log("DEBUG hasMoreRounds(): this.currentRoundNumber: "+this.currentRoundNumber+
-      " this.rounds: "+this.rounds+" hasMore: "+hasMore);
     return hasMore;
   }
  
@@ -680,12 +805,13 @@ class GameRoom{
     @param totalQuestions The count of questions in this round.  
   */
   sendNextQuestion(question,currentRoundNumber, questionNumber, totalQuestions){
-   
+    gameStats.questionsServed++;
+
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
     let data = { currentRoundNumber: currentRoundNumber, questionNumber: questionNumber, totalQuestions: totalQuestions, question: question.questionData };
-    console.debug("Sending question: %o",data);
+    logger.debug("Room "+ this.roomName + ": sending round "+currentRoundNumber+" of "+this.rounds+", question "+questionNumber+" of "+totalQuestions);
     
     io.to(this.roomName).emit('question',data);
 
@@ -699,9 +825,12 @@ class GameRoom{
  sendAnswer(gameRoom){
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
-  // console.log("DEBUG: In sendAnswer() currentQuestionObj: %o ",currentQuestionObj);
-  
-  io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
+  try{
+    io.to(gameRoom.roomName).emit('answer',{answer: currentQuestionObj.correctAnswer}); 
+  } catch(err){
+    logger.error('Caught error: '+err);
+  }
+
   let answerTitle = 'Answer';
   currentRoundObj.currentQuestionNumber++;
   //createTimerNoCountdown(gameRoom.roomName,SHOW_ANSWER_TIMER,'countdown-answer',answerTitle,gameRoom,gameRoom.playRound);
@@ -717,13 +846,12 @@ class GameRoom{
     this.currentRoundNumber++;
     let gameEnded = (this.rounds === this.currentRoundNumber)? true : false;
 
-    console.log("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
-
+    logger.debug("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
     io.to(this.roomName).emit('round-end',{playerArray: this.getPlayerInfo(), gameEnded:gameEnded});
     
     let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
     
-    let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>console.log("Waiting for Owner to start the next round");
+    let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>logger.debug("Waiting for Owner to start the next round");
 
     createTimer(this.roomName,SHOW_SCORES_TIMER,'countdown-endround',roundMessage,false,this,callback);
   }
@@ -732,18 +860,29 @@ class GameRoom{
     @emits game-ended With the winner 
   */
   endGame(){
-    let winningPlayerArray = this.getWinners();
-    console.log("sending winner array: %o ",winningPlayerArray);
-    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
-    console.log("Closing all the sockets for room "+gameRoom.roomName);
-    this.players.forEach(player=>{
-      player.socket.disconnect(true);
-      console.log('Disconneded socket for player: '+player.name);
-    });
+    gameStats.gamesFinished++;
 
-    gameRoom.gameStatus = 'ENDED';
-    console.log('Calling external function to delete game');
-    endGame(gameRoom.roomName, gameRoom.ownerID);
+    let winningPlayerArray = this.getWinners();
+    logger.debug("sending winner array:")
+    
+    let gameRoom = gameRoomArray[this.roomName];
+    logger.info("Final scores for "+gameRoom.roomName+" "+JSON.stringify(gameRoom.getPlayerInfo()));
+    io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
+    logger.debug('Pausing for a second before game cleanup for '+gameRoom.roomName);
+    
+    // delay 1 second before disconnecting all sockets to ensure the emissions happen
+    setTimeout(function(){
+      logger.debug("Closing all the sockets for room "+gameRoom.roomName);
+      gameRoom.players.forEach(player=>{
+        player.socket.disconnect(true);
+        logger.debug('Disconnected socket for player: '+player.name);
+      });
+  
+      gameRoom.gameStatus = 'ENDED';
+      logger.debug('Calling external function to delete game');
+      endGame(gameRoom.roomName, gameRoom.ownerID);
+    }, 1000);
+
   
 }
 
@@ -808,8 +947,8 @@ class Round {
   */
   getCurrentQuestion(){
     let currentQuestionObj = this.questionArray[this.currentQuestionNumber];
-//    console.log('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
-//    console.log('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
+//    logger.debug('DEBUG: in getCurrentQuestion() this.questionArray: o%',this.questionArray);
+//    logger.debug('DEBUG: in getCurrentQuestion() and currentQuestion: o%',currentQuestionObj);
     return currentQuestionObj;
   }
 
@@ -833,12 +972,10 @@ class Question{
     };
     this.questionData.answers.push(this.correctAnswer);
     this.questionData.answers = shuffle(this.questionData.answers);
-    // console.debug("DEBUG: Successfully created question with questionData: %o",this.questionData);
 
   }
 
 }
-
 
 /* The Player class encapsulates all the aspects and attributes of the Player */
 class Player{
@@ -861,212 +998,35 @@ class Player{
 
 ///////////////  API ENDPOINTS - START ///////////////
 
-/* /api/create-game Initializes a new game.
-@param: req.params.amount  optional The number of questions to retrieve per round.  Defaults to 10 if not specified.
-@param: req.params.rounds optional The number of rounds for which to receive questions. Defaults to 1 if not specified.
-@return: res.send sends JSON as a resonse to the call. No explicit return.
-*/
-app.get('/api/create-game', (req, res) => {
-  // console.log("my object: %o", req)
-  result = validateParams(["owner","rounds","questions","difficulty","categories"],req.query);
-  if(!result.success){
-    console.error(result.messages)  
-    res.status(400).send({ game_status: 'failed', errors: result.messages });
-    return;
-  }
-
-  var owner = req.query.owner;
-  console.log('Owner set to: ' + owner);
-
-
-  var questionsPerRound = req.query.questions;
-  if(questionsPerRound < 1 || questionsPerRound > MAX_NUM_QUESTIONS){ questionsPerRound = DEFAULT_NUM_QUESTIONS; }
-  console.log('Number of questions set to: ' + questionsPerRound);
-  
-  var rounds = req.query.rounds;
-  if(rounds < 1 || rounds > MAX_ROUNDS){rounds = DEFAULT_NUM_ROUNDS; }
-  console.log('Number of rounds set to: ' + rounds);
-
-
-  var pauseBetweenRounds = (req.query.pauseBetweenRounds) ? req.query.pauseBetweenRounds : false; 
-
-  var difficulty = req.query.difficulty;
-
-  // If the categories array is empty, set the category to General by default
-  var categories = (categories.length === 0)? [9]:req.query.categories;
-
-  // create a new game room with the supplied parameters and add it to the list of games
-  game = new GameRoom(owner,rounds,questionsPerRound,difficulty,pauseBetweenRounds, categories);
-
-  gameRoomArray[game.roomName] = game;
-  console.log("Room Created: %o",game);
-
-  res.send({ game_status: 'WAITING',rounds: rounds, questions: questionsPerRound, roomname: game.roomName, owner: owner, owner_id: game.ownerID });
-})
-
-/* /api/add-player Takes a GameRoom name a player name and adds the player to the game.
-  @param roomname The room to start playing.
-  @param player  The player name to add to the room.
-  @returns JSON game_status: If success, player is added to the room. If failed, error message.
-*/
-app.get('/api/add-player', (req, res) => {
-result = validateParams(["roomname","player"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages});
-  return;
-}
-if(!doesGameExist(req.query.roomname)){
-  console.error("roomname not found");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
-  return;
-}
-
-result = addPlayer(req.query.player,req.query.roomname,{connected:false});
-if(result.success){
-  const game = gameRoomArray[req.query.roomname];
-  res.send({ game_status: 'success',
-            room_name: req.query.roomname, 
-            player: req.query.player,
-            questions: game.questionCount,
-            difficulty: game.difficulty,
-            rounds: game.rounds,
-            roomname: game.roomName, 
-            owner: game.owner,
-            players: game.getPlayerInfo()
-          });
-} else {
-  res.status(400).send({ game_status: 'failed', error: result.message });
-}
-})
-
-
-/* /api/remove-player Takes a GameRoom name a player name and removes player from the game.
-  @param roomname The room to exit.
-  @param player  The player name to remove from the room.
-  @returns JSON game_status: If success, player is removed from the room. If failed, error message.
-*/
-app.get('/api/remove-player', (req, res) => {
-result = validateParams(["roomname","player"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-if(!doesGameExist(req.query.roomname)){
-  console.error("roomname not found");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname found' });
-  return;
-}
-removePlayer(req.query.player, req.query.roomname);
-res.send({ game_status: 'success',room_name: req.query.roomname, player: req.query.player });
-})
-
-
-
-/* /api/start-game Takes a GameRoom name and ownerID and moves it from the 'WAITING' state to 'PLAYING' state.
-  @param roomName The room to start playing.
-  @param ownerID  The ID to validate if this request comes from the room owner.
-  @returns JSON game_status: If success, GameRoom is set to PLAYING. If failed, error message.
-*/
-app.get('/api/start-game', (req, res) => {
-result = validateParams(["roomname","ownerID"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-
-if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-  console.error("roomname not found OR ownerID did not match with the room");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
-  return;
-}
-  // START THE GAME!
- gameRoomArray[req.query.roomname].gameState = 'PLAYING';
-
-console.log("/api/start-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-res.send({ game_status: 'PLAYING',room_name: req.query.roomname });
-})
-
-/* /api/end-game Takes a GameRoom name and ownerID and removes the game from the server.
-  @param roomName The room to be removed.
-  @param ownerID  The ID to validate if this request comes from the room owner.
-  @returns JSON game_status: removed or failed. If success, room name. If failed, error message.
-*/
-app.get('/api/end-game', (req, res) => {
-result = validateParams(["roomname","ownerID"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ game_status: 'failed', errors: result.messages });
-  return;
-}
-
-if(!isGameOwner(req.query.roomname, req.query.ownerID)){
-  console.error("roomname not found OR ownerID did not match with the room");
-  res.status(400).send({ game_status: 'failed', error: 'no such roomname with ownerID found' });
-  return;
-}
-if(!endGame(req.query.roomname, req.query.ownerID)){
-  console.error("Unable to remove game for some reason");
-  res.status(500).send({ game_status: 'failed', error: 'unable to remove game...not sure why' });
-  return;
-}
-console.log("/api/end-game called:\n"+req.query.roomname+ " removed for ownerID "+req.query.ownerID);
-res.send({ game_status: 'removed',room_name: req.query.roomname });
-})
 
 /* List all games on the server. Returns the room name, the create date, players and status */
 app.get('/api/list-games', (req, res) => {
 var gameList = {games: []};
 const roomIDs = Object.keys(gameRoomArray);
-console.log("Room IDs: "+roomIDs);
+logger.debug("Room IDs: "+roomIDs);
 roomIDs.forEach(id => {
   var gameBrief = {};
-  console.log(gameRoomArray[id]);
   gameBrief["roomName"] = gameRoomArray[id].roomName;
   gameBrief["createdDate"] = gameRoomArray[id].createdDate;
   gameBrief["players"] = gameRoomArray[id].getPlayerInfo();
   gameBrief["status"] = gameRoomArray[id].state;
   gameList.games.push(gameBrief);  
   });
-  console.log("/api/list-games called:\n %o",gameList);
+  logger.debug("/api/list-games called");
   res.send(gameList);
 })
 
-// DEBUG - REMOVE BEFORE PROD
-app.get('/api/dump-all-games', (req, res) => {
-  console.log("/api/dump-all-games called");
-  res.send({ gameRoomArray });
-})
 
-// DEBUG - REMOVE BEFORE PROD
+// Get a list of all socket connections for connected users
 app.get('/api/get-all-users', (req, res) => {
-  console.log("/api/get-all-users called");
+  logger.debug("/api/get-all-users called");
   res.send({ socketConnections });
 })
 
-// DEBUG - REMOVE BEFORE PROD
-/* Send an event to all clients */
-app.get('/api/send-event', (req, res) => {
-result = validateParams(["e","d"],req.query);
-if(!result.success){
-  console.error(result.messages)  
-  res.status(400).send({ success: false, errors: result.messages });
-  return;
-}
-
-  console.log("/api/send-event called");
-  const roomIDs = Object.keys(gameRoomArray);
-  const event = req.query.e;
-  const queryData = JSON.parse(req.query.d);
-  console.log(queryData);
-  roomIDs.forEach(id => {
-    const gameRoom = gameRoomArray[id];
-    
-    io.to(gameRoom.roomName).emit(event,queryData);
-  });
-  res.send({message: 'sent event to all clients: '+req.query.e, data: queryData});
+//Get the Game Statistics
+app.get('/api/info', (req, res) => {
+  logger.debug("/api/info called");
+  res.send({gameStats});
 })
 
 // Catch all route to send to the static React app

@@ -34,6 +34,8 @@ export default function AlertDialog(props) {
     <Box>
       <Paper>
       <Dialog
+        disableBackdropClick={true}
+        disableEscapeKeyDown={true}
         open={open}
         onClose={handleCancel}
         aria-labelledby="alert-dialog-title"
