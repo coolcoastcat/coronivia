@@ -29,7 +29,7 @@ import {
 const useStyles = makeStyles((theme) => ({
   formControl: {
     margin: theme.spacing(1),
-    minWidth: 170,
+    minWidth: 250,
     maxWidth: 250
   },
   selectEmpty: {
@@ -41,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
   },
   margin: {
     margin: theme.spacing(1),
-    minWidth: 120
+    minWidth: 250
   },
   colorfulButton: {
     background: 'linear-gradient(45deg, #32a852 30%, #d8e038 90%)',
@@ -286,7 +286,7 @@ export function CreateGameForm(props) {
             <Grid container>
             <Grid item xs={12}>
                 <FormControl className={classes.formControl}>
-                <InputLabel id="seconds-select-label">Question Countdown</InputLabel>
+                <InputLabel id="seconds-select-label">Question Timer</InputLabel>
                 <Select
                   labelId="seconds-select-label"
                   id="seconds-select"
