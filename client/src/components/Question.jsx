@@ -98,18 +98,18 @@ const styles = theme => ({
     },
     questionDataHd: {
         fontSize: '14px',
-        fontWeight: 600,
-   
+        fontWeight: 600
     },
     sans: {
         fontFamily: 'sans-serif'     
     },
     sent: {
+        margin: '2px 0px',
         fontWeight:"fontWeightBold",
-        background: '#f5f5c1'
+        background: '#f0f8ff'
     },
     notsent: {
-
+        margin: '2px 0px',
     }
   });
 
