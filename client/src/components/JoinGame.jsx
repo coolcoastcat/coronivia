@@ -39,7 +39,8 @@ function getErrorPhrase(){
       this.state = { 
         joined: false,
         joinError: false,
-        joinErrorMsg: null
+        joinErrorMsg: null,
+        player: localStorage.getItem('player')
       }
       this.socket = null; // Initialize
       this.gameConfig = {}; // The parsed config to send to Game
@@ -47,15 +48,16 @@ function getErrorPhrase(){
       this.handleFormSubmit = this.handleFormSubmit.bind(this);
       this.playerListElement = React.createRef(); // Bind to Game method for passing status
 
-      if(this.query.get("roomname") && this.query.get("player") ) {
+      if(this.query.get("roomname") && this.state.player ) {
         var submission = {
           roomname: this.query.get("roomname"),
-          player: this.query.get("player")
+          player: this.state.player
         };
         this.handleFormSubmit(submission);
       }
     }
 
+  
 
     /* Sets up the socket event handlers for the Join activities */
     setUpEventHandlers(){
@@ -80,7 +82,9 @@ function getErrorPhrase(){
     */ 
     handleFormSubmit(joinGameData){
       
-  
+      localStorage.setItem('player',joinGameData.player);
+      this.setState({player:joinGameData.player});
+      
       this.socket = io(SERVER_URI);
       this.setUpEventHandlers();
       this.socket.on('connect',() =>{
@@ -114,8 +118,9 @@ function getErrorPhrase(){
       }
 
       if(!this.state.joined){
+        console.debug('Rendering JoinGameForm with player: '+this.state.player);
         return( 
-          <JoinGameForm roomname={this.query.get("roomname")} player={this.query.get("player")}    handleFormSubmit={this.handleFormSubmit} />
+          <JoinGameForm roomname={this.query.get("roomname")} player={this.state.player}    handleFormSubmit={this.handleFormSubmit} />
         );
       } else {
         return(
