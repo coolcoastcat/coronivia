@@ -276,9 +276,8 @@ class Question extends React.Component {
             if(qObj.answers){
 
                 this.radios = qObj.answers.map((answer)=> {
-                    let sent = (this.state.playerAnswer && this.state.playerAnswer === answer) ? 'SENT: ': '';
                     let style = (this.state.playerAnswer && this.state.playerAnswer === answer) ? classes.sent:classes.notsent;
-                     return <FormControlLabel className={style}  key={answer} value={answer} control={<Radio  color="primary" />} label={sent+renderHTML(answer)} color="primary" />
+                     return <FormControlLabel className={style}  key={answer} value={answer} control={<Radio  color="primary" />} label={renderHTML(answer)} color="primary" />
                     }
                 );
 

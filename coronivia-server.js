@@ -79,7 +79,7 @@ const GAME_START_COUNTDOWN = 3;
 const ROUND_LABEL_TIMER = 3;
 const QUESTION_COUNTDOWN_DEFAULT = 15;
 const SHOW_ANSWER_TIMER = 5;
-const SHOW_SCORES_TIMER = 7;
+const SHOW_SCORES_TIMER = 4;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -360,13 +360,13 @@ function handleNewSocketConnection(socket){
     let currentRoundObj = gameRoom.getCurrentRound();
     let currentQuestion = currentRoundObj.getCurrentQuestion();
     if(currentQuestion){
-      logger.debug("player-answer: Player "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      logger.debug("Game "+gameRoom.roomName+" player-answer ->  player: "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+      gameRoom.playerAnswers[data.player] = data.playerAnswer;
       if(data.playerAnswer === currentQuestion.correctAnswer) {
         let points = currentQuestion.questionData.pointValue;
-        gameRoom.getPlayer(data.player).updateScore(points);
         pointsEarned = points;
-        logger.debug("Player earned: "+points);
       }
+
       callback({success: true, points: pointsEarned});
     } else {
       logger.debug("Player was too late answering question and no current question exists!");
@@ -642,6 +642,8 @@ class GameRoom{
       this.pauseBetweenRounds = pauseBetweenRounds;
       this.questionFive = questionFive;
 
+      this.playerAnswers = {}; // populated by players emitting player-answer events for each question
+
       // This handles the case where we may have fewer questions per round than the user asked for
       this.rounds = this.gameRoundArray.length;
   }
@@ -711,6 +713,8 @@ class GameRoom{
   return uuidv4();
 }
 
+  /*
+
   /* Calls the local data structure to retrieve questions and asynchronously sets the question sets as rounds into gameRoundQuestions array
       @param rounds required The number of rounds for which to receive quesitons. Defaults to 1 if not specified.
       @param questionsPerRound  required The number of questions to retrieve per round.  Defaults to 10 if not specified.
@@ -752,7 +756,7 @@ class GameRoom{
                     );
           return;
         }
-        let round = new Round(questionObjArray.slice(start,end));
+        let round = new Round(questionObjArray.slice(start,end),i+1);
         this.gameRoundArray.push(round);
 
     }
@@ -809,6 +813,8 @@ class GameRoom{
 
     currentRoundNumber++; // For labeling
     questionNumber++; // For labeling
+    this.playerAnswers = {}; // reset the answer object
+
     let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
     let data = { currentRoundNumber: currentRoundNumber, 
                   questionNumber: questionNumber, 
@@ -823,11 +829,27 @@ class GameRoom{
     createTimer(this.roomName,this.questionCountdown,'countdown-question',questionTitle,true,this,this.sendAnswer);
   }
 
+  /* once question timer has elapsed, calculate the player's scores based on their last answer */
+  calculateScores(){
+    const currentRoundObj = this.getCurrentRound();
+    const currentQuestion = currentRoundObj.getCurrentQuestion();
+    const questionNumber = currentQuestion.currentQuestionNumber + 1;
+    logger.debug("Scoring question for game: "+this.roomName+" Round: "+currentRoundObj.roundNumber+" Question: "+questionNumber);
+    
+    for(const player in this.playerAnswers){
+      let points = (this.playerAnswers[player]  === currentQuestion.correctAnswer) ? currentQuestion.questionData.pointValue : 0;
+      this.getPlayer(player).updateScore(points);
+      logger.debug("Player: "+player+" earned: "+points+" for game: "+this.roomName+" R"+currentRoundObj.roundNumber+"Q"+questionNumber);
+    } 
+
+  }
+
   /* Shows the answer to the current question and calls playRound after an interval.
       Also increments the currentQuestion for the next round
     @emits answer event with the correct answer
   */
  sendAnswer(gameRoom){
+  gameRoom.calculateScores();  // Calculate the current question scores
   let currentRoundObj = gameRoom.getCurrentRound();
   let currentQuestionObj = currentRoundObj.getCurrentQuestion();
   try{
@@ -934,7 +956,8 @@ getWinners(){
 /* The Round class is a thin object wrapper to hold round questions. The order of Round objects  in the 
 gameRound array is the order of Rounds (duh ;)  */
 class Round {
-  constructor(questionArray){
+  constructor(questionArray, roundNumber){
+    this.roundNumber = roundNumber;
     this.questionArray = questionArray;
     this.currentQuestionNumber = 0;
     this.numberOfQuestions = questionArray.length;
