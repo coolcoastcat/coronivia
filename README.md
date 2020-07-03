@@ -1,102 +1,7 @@
 # coronivia
 An open source, online trivia game that friends can play casual trivia games while Zooming, Teaming, Skyping, etc. The name, Coronivia, is a nod to the special times and circumstances that led to the strong need for online distractions with friends, families and colleagues. 
 
-## Releases
-__v0.0.8 - Current__
-Bug fixes
-* #[42](https://github.com/coolcoastcat/coronivia/issues/42) - Socket closure on Game component unload
-* #[50](https://github.com/coolcoastcat/coronivia/issues/50) - AlertDialog allows licking outside the window to close, leaving blank screen
-* #[52](https://github.com/coolcoastcat/coronivia/issues/52) - Submit answer without clicking radio explodes
-* #[56](https://github.com/coolcoastcat/coronivia/issues/56) - On Game start, check if user's socket is disconnected and reconnect
-
-Enhancements
-* #[16](https://github.com/coolcoastcat/coronivia/issues/16) - Under advanced game options allow an answer 5, which randomly picks one of the other 4 answers.
-* #[20](https://github.com/coolcoastcat/coronivia/issues/20 ) - Add winston or pino logging to coronivia-server.js
-* #[24](https://github.com/coolcoastcat/coronivia/issues/24) - Enable Advanced option for Owner to set question timeout 
-* #[35](https://github.com/coolcoastcat/coronivia/issues/35) - Make question countdown seconds configurable as an advanced option.
-* #[39](https://github.com/coolcoastcat/coronivia/issues/39) - Add a trophy icon to the winner's dialog 
-* #[47](https://github.com/coolcoastcat/coronivia/issues/47) - Log game data to server log file
-* #[51](https://github.com/coolcoastcat/coronivia/issues/51) - Clean up coronivia-server.js logging
-* #[53](https://github.com/coolcoastcat/coronivia/issues/53) - When last user leaves the game, remove game from server. 
-* #[54](https://github.com/coolcoastcat/coronivia/issues/54) - Show player list scores on the winners screen
-* #[57](https://github.com/coolcoastcat/coronivia/issues/57) - Make question text smaller for more optimal mobile display
-* #[58](https://github.com/coolcoastcat/coronivia/issues/58) - Enable submit when clicking radio 
-* #[59](https://github.com/coolcoastcat/coronivia/issues/59) - Sort player list by descending score
-
-
-Known Issues
-* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
-
-__v0.0.7__
-Bug fixes
-* Cleaned up unused files
-* Resolved linting complaints
-* #[37](https://github.com/coolcoastcat/coronivia/issues/37) - Can't stay once Player clicks leave game from Waiting room.
-* #[36](https://github.com/coolcoastcat/coronivia/issues/36) - Question Categories are not shuffled.
-* #[34](https://github.com/coolcoastcat/coronivia/issues/34) - Category multi-select is a mess
-* #[33](https://github.com/coolcoastcat/coronivia/issues/33) - UI: Player's panel doesn't fill screen in waiting room
-* #[31](https://github.com/coolcoastcat/coronivia/issues/31) - UI: Short question titles have answer wrap up the line
-* #[30](https://github.com/coolcoastcat/coronivia/issues/30) - Never let timer show less than 0
-* #[29](https://github.com/coolcoastcat/coronivia/issues/29) - Handle disconnect and reconnect
-* #[13](https://github.com/coolcoastcat/coronivia/issues/13) - Player Joins after game starts
-
-Enhancements
-* #[32](https://github.com/coolcoastcat/coronivia/issues/32) - Turn timer yellow when under 50% remaining and red when under 25% remaining
-* #[28](https://github.com/coolcoastcat/coronivia/issues/28) - Show spinner while displaying other dialogs
-* #[25](https://github.com/coolcoastcat/coronivia/issues/25) - Add a Coronivia Info Dialog
-* #[23](https://github.com/coolcoastcat/coronivia/issues/23) - Add Game Create Feature to pause between rounds
-* #[19](https://github.com/coolcoastcat/coronivia/issues/19) - Investigate if there is an easy way to limit categories of questions to a subset. If not, consider pulling a pool of question from mainstream categories. 
-* #[18](https://github.com/coolcoastcat/coronivia/issues/18) - Add a check when a user trys to navigate away from the page to warn them they will lose their game.
-* 
-
-Known Issues
-* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
-
-
-__v0.0.6__
-Bug fixes
-* [6 - Fix Unique Key Bug in PlayerListScores](https://github.com/coolcoastcat/coronivia/issues/6)
-* [21 - Mobile experience has multiple UI issues](https://github.com/coolcoastcat/coronivia/issues/21)
-
-Enhancements
-* Added question above the submitted answer
-* Added detection of dev vs prod environments for using different SERVER_URIs
-
-
-__v0.0.5__
-Bug fixes
-    * #[11](https://github.com/coolcoastcat/coronivia/issues/11) - Answer shown as correct after a correct answer followed by a no response.
-    * Server timer events sent so timers go all the way to zero
-* Configured package.json and added `yarn package` script to build the client and stage files in `./public` for deployment to GCP
-* App is publicly available at https://coronivia-280216.wm.r.appspot.com/
-
-__v0.0.4__
-* Fully implemented Material UI with consistent UI and visual niceties such as countdown timer for questions
-* Worked to make dialogs and particularly question text more visible.
-* Added form validation
-
-Known Issues
-* Some console errors being thrown
-* Player leave game isn't working
-* After a correct answer submit, a no answer shows as correct
-* Joining after the game starts is a bad experience for the joiner
-
-__v0.0.3__
-* Steel threaded the game flow for multiple users
-* Added Material UI for some components
-* Lots of refactoring. Moved classes out of index.js
-
-Known Issues
-* UI is a hot mess with lots of experimentation and learning in progress.  Lots of cleanup to be done.  
-* User can select an answer and not submit it but the UI says it was on the answer screen
-* Dialog messages need to be refined.
-
-
-__v0.0.2__
-* WIP Release - Overview: Substantial progress in creating core artifacts and eventing architecture. Released before creating the game state machine.
-* Owners can create / end games 
-* Players can join / leave games
-* Basic components and real-time event exchanges functional
+[See Releases](#releases)
 
 ## The Game
 Coronivia is a game for 1 to 1 million players (might need some load testing and some sponsored hosting for the million player games). The landing page will have a very simple interface to either:
@@ -134,6 +39,114 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
 * __Join a game__
 
     Join a game allows a user to enter a four character Join Game Code to enter a non-started game. Players are prompted for their player name and are then placed in the waiting room.
+
+## Releases
+__v0.0.9 - Current__
+
+Bug fixes
+* #[64](https://github.com/coolcoastcat/coronivia/issues/64) - Fix Question dialogs so titles don't bounce around.
+* #[67](https://github.com/coolcoastcat/coronivia/issues/67) - Clicking on answers allows earning points
+* #[68](https://github.com/coolcoastcat/coronivia/issues/68) - Add try/catch around game room access on server.
+
+Enhancements
+* #[61](https://github.com/coolcoastcat/coronivia/issues/61) - Show a snackbar when new user joins waiting room
+* #[63](https://github.com/coolcoastcat/coronivia/issues/63) - Leave answers showing when submitting
+* #[66](https://github.com/coolcoastcat/coronivia/issues/66) - Sticky Options
+
+Known Issues
+* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
+
+__v0.0.8__
+
+Bug fixes
+* #[42](https://github.com/coolcoastcat/coronivia/issues/42) - Socket closure on Game component unload
+* #[50](https://github.com/coolcoastcat/coronivia/issues/50) - AlertDialog allows licking outside the window to close, leaving blank screen
+* #[52](https://github.com/coolcoastcat/coronivia/issues/52) - Submit answer without clicking radio explodes
+* #[56](https://github.com/coolcoastcat/coronivia/issues/56) - On Game start, check if user's socket is disconnected and reconnect
+
+Enhancements
+* #[16](https://github.com/coolcoastcat/coronivia/issues/16) - Under advanced game options allow an answer 5, which randomly picks one of the other 4 answers.
+* #[20](https://github.com/coolcoastcat/coronivia/issues/20 ) - Add winston or pino logging to coronivia-server.js
+* #[24](https://github.com/coolcoastcat/coronivia/issues/24) - Enable Advanced option for Owner to set question timeout 
+* #[35](https://github.com/coolcoastcat/coronivia/issues/35) - Make question countdown seconds configurable as an advanced option.
+* #[39](https://github.com/coolcoastcat/coronivia/issues/39) - Add a trophy icon to the winner's dialog 
+* #[47](https://github.com/coolcoastcat/coronivia/issues/47) - Log game data to server log file
+* #[51](https://github.com/coolcoastcat/coronivia/issues/51) - Clean up coronivia-server.js logging
+* #[53](https://github.com/coolcoastcat/coronivia/issues/53) - When last user leaves the game, remove game from server. 
+* #[54](https://github.com/coolcoastcat/coronivia/issues/54) - Show player list scores on the winners screen
+* #[57](https://github.com/coolcoastcat/coronivia/issues/57) - Make question text smaller for more optimal mobile display
+* #[58](https://github.com/coolcoastcat/coronivia/issues/58) - Enable submit when clicking radio 
+* #[59](https://github.com/coolcoastcat/coronivia/issues/59) - Sort player list by descending score
+
+__v0.0.7__
+
+Bug fixes
+* Cleaned up unused files
+* Resolved linting complaints
+* #[37](https://github.com/coolcoastcat/coronivia/issues/37) - Can't stay once Player clicks leave game from Waiting room.
+* #[36](https://github.com/coolcoastcat/coronivia/issues/36) - Question Categories are not shuffled.
+* #[34](https://github.com/coolcoastcat/coronivia/issues/34) - Category multi-select is a mess
+* #[33](https://github.com/coolcoastcat/coronivia/issues/33) - UI: Player's panel doesn't fill screen in waiting room
+* #[31](https://github.com/coolcoastcat/coronivia/issues/31) - UI: Short question titles have answer wrap up the line
+* #[30](https://github.com/coolcoastcat/coronivia/issues/30) - Never let timer show less than 0
+* #[29](https://github.com/coolcoastcat/coronivia/issues/29) - Handle disconnect and reconnect
+* #[13](https://github.com/coolcoastcat/coronivia/issues/13) - Player Joins after game starts
+
+Enhancements
+* #[32](https://github.com/coolcoastcat/coronivia/issues/32) - Turn timer yellow when under 50% remaining and red when under 25% remaining
+* #[28](https://github.com/coolcoastcat/coronivia/issues/28) - Show spinner while displaying other dialogs
+* #[25](https://github.com/coolcoastcat/coronivia/issues/25) - Add a Coronivia Info Dialog
+* #[23](https://github.com/coolcoastcat/coronivia/issues/23) - Add Game Create Feature to pause between rounds
+* #[19](https://github.com/coolcoastcat/coronivia/issues/19) - Investigate if there is an easy way to limit categories of questions to a subset. If not, consider pulling a pool of question from mainstream categories. 
+* #[18](https://github.com/coolcoastcat/coronivia/issues/18) - Add a check when a user trys to navigate away from the page to warn them they will lose their game.
+
+__v0.0.6__
+
+Bug fixes
+* [6 - Fix Unique Key Bug in PlayerListScores](https://github.com/coolcoastcat/coronivia/issues/6)
+* [21 - Mobile experience has multiple UI issues](https://github.com/coolcoastcat/coronivia/issues/21)
+
+Enhancements
+* Added question above the submitted answer
+* Added detection of dev vs prod environments for using different SERVER_URIs
+
+
+__v0.0.5__
+
+Bug fixes
+    * #[11](https://github.com/coolcoastcat/coronivia/issues/11) - Answer shown as correct after a correct answer followed by a no response.
+    * Server timer events sent so timers go all the way to zero
+* Configured package.json and added `yarn package` script to build the client and stage files in `./public` for deployment to GCP
+* App is publicly available at https://coronivia-280216.wm.r.appspot.com/
+
+__v0.0.4__
+* Fully implemented Material UI with consistent UI and visual niceties such as countdown timer for questions
+* Worked to make dialogs and particularly question text more visible.
+* Added form validation
+
+Known Issues
+* Some console errors being thrown
+* Player leave game isn't working
+* After a correct answer submit, a no answer shows as correct
+* Joining after the game starts is a bad experience for the joiner
+
+__v0.0.3__
+* Steel threaded the game flow for multiple users
+* Added Material UI for some components
+* Lots of refactoring. Moved classes out of index.js
+
+Known Issues
+* UI is a hot mess with lots of experimentation and learning in progress.  Lots of cleanup to be done.  
+* User can select an answer and not submit it but the UI says it was on the answer screen
+* Dialog messages need to be refined.
+
+
+__v0.0.2__
+* WIP Release - Overview: Substantial progress in creating core artifacts and eventing architecture. Released before creating the game state machine.
+* Owners can create / end games 
+* Players can join / leave games
+* Basic components and real-time event exchanges functional
+
 
 ## How to Contribute
 [Contributing to Coronivia](/CONTRIBUTING.md)
