@@ -190,25 +190,29 @@ function handleNewSocketConnection(socket){
   
     let addPlayerResult = addPlayer(data.player,data.roomname,socket);
     if(addPlayerResult.success){
-      let game = gameRoomArray[data.roomname];
-      let gameConfig = { success: true, 
-                          player: data.player,
-                          questions: game.questionCount,
-                          difficulty: game.difficulty,
-                          rounds: game.rounds,
-                          roomname: game.roomName, 
-                          owner: game.owner,
-                          gameStatus: game.gameStatus,
-                          ownerID: (data.player === game.owner)? game.ownerID : null,
-                          pauseBetweenRounds: game.pauseBetweenRounds,
-                          questionFive: game.questionFive,
-                          players: game.getPlayerInfo()
+      try { // it's possible the game was removed between the check above and here
+        let game = gameRoomArray[data.roomname];
+        let gameConfig = { success: true, 
+                            player: data.player,
+                            questions: game.questionCount,
+                            difficulty: game.difficulty,
+                            rounds: game.rounds,
+                            roomname: game.roomName, 
+                            owner: game.owner,
+                            gameStatus: game.gameStatus,
+                            ownerID: (data.player === game.owner)? game.ownerID : null,
+                            pauseBetweenRounds: game.pauseBetweenRounds,
+                            questionFive: game.questionFive,
+                            players: game.getPlayerInfo()
+        }
+        logger.debug("Sending gameConfig: "+JSON.stringify(gameConfig));
+        callback(gameConfig);
+        // Tell everyone that the Players have changed
+        io.to(data.roomname).emit('player-change',game.getPlayerInfo());
+      } catch(err){
+        logger.error("Game was probably removed as player tried to join it. "+err);
       }
-      logger.debug("Sending gameConfig: "+JSON.stringify(gameConfig));
-      callback(gameConfig);
-      // Tell everyone that the Players have changed
-      io.to(data.roomname).emit('player-change',game.getPlayerInfo());
-      return;
+        return;
       // socket.emit('game-joined',gameConfig);
     } else {
       callback({ success: false, error: addPlayerResult.message});
@@ -241,25 +245,29 @@ function handleNewSocketConnection(socket){
     }
 
     let removePlayerResult =  removePlayer(data.player, data.roomname); 
-    let game = gameRoomArray[data.roomname];
+    try { //it's possible game was removed between the check above and this code
+      let game = gameRoomArray[data.roomname];
 
-    if(removePlayerResult.success){
-      logger.debug("Successfully removed player "+data.player+" number of remaining players: "+game.players.length );
+      if(removePlayerResult.success){
+        logger.debug("Successfully removed player "+data.player+" number of remaining players: "+game.players.length );
 
-      if(game.players.length > 0){ // Only send an event if there is someone to send it to
-        // Tell everyone that the Players have changed
-        io.to(data.roomname).emit('player-change',game.getPlayerInfo());
-        callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
-      } else {
-        // end the game since there is no one left!
-        logger.debug("All players have left game "+game.roomName+". Ending game.");
-        gameStats.gamesAbandoned++;
-        endGame(game.roomName, game.ownerID);
-      }
+        if(game.players.length > 0){ // Only send an event if there is someone to send it to
+          // Tell everyone that the Players have changed
+          io.to(data.roomname).emit('player-change',game.getPlayerInfo());
+          callback({ success: true, error: 'Player '+data.player+' removed from room '+data.roomname});
+        } else {
+          // end the game since there is no one left!
+          logger.debug("All players have left game "+game.roomName+". Ending game.");
+          gameStats.gamesAbandoned++;
+          endGame(game.roomName, game.ownerID);
+        }
     } else {
       // probably useless since the client already left...
       callback({ success: false, error: removePlayerResult.messages});
     }
+  } catch(err){
+    logger.error("Game was likely removed between the existence check and trying to remove player: "+err);
+  }
 
   });
   
@@ -278,15 +286,19 @@ function handleNewSocketConnection(socket){
       return;
     }
   
-    let game = gameRoomArray[data.roomname];
-    io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
+    
+    try{ // It's possible the game got removed before this finishes 
+      let game = gameRoomArray[data.roomname];
+      io.to(data.roomname).emit('player-change',game.getPlayerInfo()); // Update all the scores
 
-    if(!endGame(data.roomname, data.ownerID)){
-      logger.error("Unable to remove game for some reason");
-      callback({ success: false, error: 'unable to remove game...not sure why'});
-      return;
+      if(!endGame(data.roomname, data.ownerID)){
+        logger.error("Unable to remove game for some reason");
+        callback({ success: false, error: 'unable to remove game...not sure why'});
+        return;
+      }
+    } catch(err){
+      logger.error("Game was likely removed before it could be canceled: "+err);
     }
-  
     io.to(data.roomname).emit('game-cancelled',{success: true, message: data.roomname+' was removed'}); // cancel for all
     logger.debug("cancel-game called: room "+data.roomname+ " removed for ownerID "+data.ownerID);
    
@@ -315,22 +327,26 @@ function handleNewSocketConnection(socket){
       callback({ success: false, error: 'no such roomname with ownerID found'});
       return;
     }
-    gameRoom = gameRoomArray[data.roomname];
-    gameRoom.gameStatus = 'PLAYING';
-    logger.debug('Starting game for room: '+data.roomname);
-    logger.info('Starting game -> '+data.roomname+' with players: '+gameRoom.players.length);
-    logger.info(gameRoom.getPlayerInfo());
+    try {
+      let gameRoom = gameRoomArray[data.roomname];
+      gameRoom.gameStatus = 'PLAYING';
+      logger.debug('Starting game for room: '+data.roomname);
+      logger.info('Starting game -> '+data.roomname+' with players: '+gameRoom.players.length);
+      logger.info(gameRoom.getPlayerInfo());
+      
+      gameStats.gamesPlayed++;
+      gameStats.mostPlayersPerGame = ( gameRoom.players.length > gameStats.mostPlayersPerGame ) ? gameRoom.players.length : gameStats.mostPlayersPerGame;
+
+      io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
+      logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
     
-    gameStats.gamesPlayed++;
-    gameStats.mostPlayersPerGame = ( gameRoom.players.length > gameStats.mostPlayersPerGame ) ? gameRoom.players.length : gameStats.mostPlayersPerGame;
+    // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
+    gameRoom.startRound(gameRoom); // Start the 1st Round
 
-    io.to(gameRoom.roomName).emit('game-start',{ gameStatus: 'PLAYING' }); // Issue game start!
-    logger.debug('Issued game-start event to Game Room: '+gameRoom.roomName);
-   
-   // createTimer(gameRoom.roomName,GAME_START_COUNTDOWN,'countdown-round',"The Game is starting!",gameRoom,gameRoom.startRound);
-   gameRoom.startRound(gameRoom); // Start the 1st Round
-
-    callback({success: true, message: 'Game started'});
+      callback({success: true, message: 'Game started'});
+    } catch(err){
+      logger.error("Handled the very unlikely case that the game was removed just after the start button was clicked: "+err);
+    }
   });
 
   /* Handles a player-answer event. Checks if the answer is correct and if so, increments the player's score 
@@ -354,23 +370,26 @@ function handleNewSocketConnection(socket){
       callback({ success: false, error: 'No such roomname found: '+data.gameRoomName});
       return;
     }
-    
-    let pointsEarned = 0;
-    let gameRoom = gameRoomArray[data.gameRoomName];
-    let currentRoundObj = gameRoom.getCurrentRound();
-    let currentQuestion = currentRoundObj.getCurrentQuestion();
-    if(currentQuestion){
-      logger.debug("Game "+gameRoom.roomName+" player-answer ->  player: "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
-      gameRoom.playerAnswers[data.player] = data.playerAnswer;
-      if(data.playerAnswer === currentQuestion.correctAnswer) {
-        let points = currentQuestion.questionData.pointValue;
-        pointsEarned = points;
-      }
+    try {
+      let pointsEarned = 0;
+      let gameRoom = gameRoomArray[data.gameRoomName];
+      let currentRoundObj = gameRoom.getCurrentRound();
+      let currentQuestion = currentRoundObj.getCurrentQuestion();
+      if(currentQuestion){
+        logger.debug("Game "+gameRoom.roomName+" player-answer ->  player: "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
+        gameRoom.playerAnswers[data.player] = data.playerAnswer;
+        if(data.playerAnswer === currentQuestion.correctAnswer) {
+          let points = currentQuestion.questionData.pointValue;
+          pointsEarned = points;
+        }
 
-      callback({success: true, points: pointsEarned});
-    } else {
-      logger.debug("Player was too late answering question and no current question exists!");
-      callback({ success: false, error: 'Answer was too late!'});
+        callback({success: true, points: pointsEarned});
+      } else {
+        logger.debug("Player was too late answering question and no current question exists!");
+        callback({ success: false, error: 'Answer was too late!'});
+      }
+    } catch(err){
+      logger.error("The game was likely removed just after the answer was submitted: "+err);
     }
   
   });
@@ -395,12 +414,16 @@ function handleNewSocketConnection(socket){
    callback({ success: false, error: 'no such roomname with ownerID found'});
    return;
  }
- gameRoom = gameRoomArray[data.roomname];
- logger.debug('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
- 
-gameRoom.startRound(gameRoom); // Start the next round
+ try {
+  gameRoom = gameRoomArray[data.roomname];
+  logger.debug('Continuing game for room: '+data.roomname+" round: "+gameRoom.currentRoundNumber);
+  
+  gameRoom.startRound(gameRoom); // Start the next round
 
- callback({success: true, message: 'Game continued.'});
+  callback({success: true, message: 'Game continued.'});
+ }catch(err){
+   logger.error("handle the unlikely case that the game was removed after the continue to next round button was pressed: "+err);
+ }
  });
 
 
@@ -492,24 +515,27 @@ function addPlayer(playerToAdd, roomname, socket){
     result.message = "Room name doesn't exist on the server: "+roomname;
     return result;
   }  
- 
-  const player = getPlayer(playerToAdd,roomname);
-  if(player){ // Player already exists
-    if(player.socket.connected){
-      result.success = false;
-      result.message = "Player with name: "+ playerToAdd+" already exists and is currently connected.";
+  try {
+    const player = getPlayer(playerToAdd,roomname);
+    if(player){ // Player already exists
+      if(player.socket.connected){
+        result.success = false;
+        result.message = "Player with name: "+ playerToAdd+" already exists and is currently connected.";
+        return result;
+      }
+      result.message = "Reconnecting to previous session";
+      player.socket = socket; // update the player's socket with new one
+      logger.debug("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
       return result;
     }
-    result.message = "Reconnecting to previous session";
-    player.socket = socket; // update the player's socket with new one
-    logger.debug("Player with name: "+ playerToAdd+" reconnected to game: "+roomname);
-    return result;
+    
+    var newPlayer = new Player(playerToAdd, roomname, socket); 
+    gameRoomArray[roomname].players.push(newPlayer);
+    logger.debug("Player with name: "+playerToAdd+" added to game:"+roomname);
+    result.message ='Player with name:'+playerToAdd+" added to game:"+roomname;
+  } catch(err){
+    logger.error("Game was likely removed after the existence check: "+err);
   }
-  
-  var newPlayer = new Player(playerToAdd, roomname, socket); 
-  gameRoomArray[roomname].players.push(newPlayer);
-  logger.debug("Player with name: "+playerToAdd+" added to game:"+roomname);
-  result.message ='Player with name:'+playerToAdd+" added to game:"+roomname;
   return result;
 }
 
@@ -519,11 +545,15 @@ function addPlayer(playerToAdd, roomname, socket){
   @param roomname The 4 character roomname to find
 */
 function removePlayer(playerToRemove, roomname){
-  let result = {success: true, message: 'Player '+playerToRemove+' removed from '+roomname};
-
-  const filtered = gameRoomArray[roomname].players.filter(player => { return player.name !== playerToRemove});
-  gameRoomArray[roomname].players = filtered;
-  logger.debug('Player '+playerToRemove+' removed from '+roomname);
+  let result = {success: false, message: 'Player '+playerToRemove+' NOT removed from '+roomname};
+  try {
+    const filtered = gameRoomArray[roomname].players.filter(player => { return player.name !== playerToRemove});
+    gameRoomArray[roomname].players = filtered;
+    logger.debug('Player '+playerToRemove+' removed from '+roomname);
+    result = {success: true, message: 'Player '+playerToRemove+' removed from '+roomname};
+  } catch(err){
+    logger.error("Game was likely removed before player could be removed: "+err);
+  }
   return result;
 }
 
@@ -585,15 +615,19 @@ function endGame(roomName, ownerID){
       return false;
     } // checks for existence and ownership
 
-  const game = gameRoomArray[roomName];
-  logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
-              " players at end: "+game.players.length);
-  logger.info(game.getPlayerInfo());
-  logger.info(JSON.stringify(gameStats));
+  try {
+    const game = gameRoomArray[roomName];
+    logger.info("Game ended -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" ended on round: "+game.currentRoundNumber+ 
+                " players at end: "+game.players.length);
+    logger.info(game.getPlayerInfo());
+    logger.info(JSON.stringify(gameStats));
 
-  delete gameRoomArray[roomName];
-  logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
-  return true;
+    delete gameRoomArray[roomName];
+    logger.debug("Removed game with roomName: "+roomName+ " and ownerID: "+ownerID );
+  } catch(err){
+    logger.error("Handled the unlikely case the game was removed between two lines of code between the existence check and the retrieval.");
+  }
+    return true;
 }
 
 /* takes an Array and shuffles the order 
@@ -773,7 +807,7 @@ class GameRoom{
     if(gameRoom.hasMoreRounds()){ // this check handles the impossible case that there are zero rounds...
       gameStats.roundsPlayed++;
 
-      let roundTitle = 'Starting Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
+      let roundTitle = 'Round ' + (gameRoom.currentRoundNumber + 1) + ' of '+gameRoom.rounds;
       logger.debug("Starting " + roundTitle);
       createTimer(gameRoom.roomName,ROUND_LABEL_TIMER,'countdown-round',roundTitle,true,gameRoom,gameRoom.playRound);
     } else { // Out of rounds, end the the game
@@ -836,11 +870,15 @@ class GameRoom{
     const questionNumber = currentQuestion.currentQuestionNumber + 1;
     logger.debug("Scoring question for game: "+this.roomName+" Round: "+currentRoundObj.roundNumber+" Question: "+questionNumber);
     
-    for(const player in this.playerAnswers){
-      let points = (this.playerAnswers[player]  === currentQuestion.correctAnswer) ? currentQuestion.questionData.pointValue : 0;
-      this.getPlayer(player).updateScore(points);
-      logger.debug("Player: "+player+" earned: "+points+" for game: "+this.roomName+" R"+currentRoundObj.roundNumber+"Q"+questionNumber);
-    } 
+    try {
+      for(const player in this.playerAnswers){
+        let points = (this.playerAnswers[player]  === currentQuestion.correctAnswer) ? currentQuestion.questionData.pointValue : 0;
+        this.getPlayer(player).updateScore(points);
+        logger.debug("Player: "+player+" earned: "+points+" for game: "+this.roomName+" R"+currentRoundObj.roundNumber+"Q"+questionNumber);
+      } 
+    } catch(err){
+      logger.error("Error while trying to update scores. Game may have been abandonded: "+err);
+    }
 
   }
 
@@ -876,7 +914,7 @@ class GameRoom{
     logger.debug("Room "+this.roomName+" ending Round "+this.currentRoundNumber);
     io.to(this.roomName).emit('round-end',{playerArray: this.getPlayerInfo(), gameEnded:gameEnded});
     
-    let roundMessage = (gameEnded )? 'Final Round Scores!':'Scores after Round '+ this.currentRoundNumber;
+    let roundMessage = (gameEnded )? 'Final Scores!':'Round '+ this.currentRoundNumber+' Scores';
     
     let callback = (!this.pauseBetweenRounds || gameEnded || this.isOwnerAbsent() ) ? this.startRound : ()=>logger.debug("Waiting for Owner to start the next round");
 
@@ -892,7 +930,7 @@ class GameRoom{
     let winningPlayerArray = this.getWinners();
     logger.debug("sending winner array:")
     
-    let gameRoom = gameRoomArray[this.roomName];
+    let gameRoom = this;
     logger.info("Final scores for "+gameRoom.roomName+" "+JSON.stringify(gameRoom.getPlayerInfo()));
     io.to(gameRoom.roomName).emit('game-ended',{winningPlayerArray: winningPlayerArray, count:0});
     logger.debug('Pausing for a second before game cleanup for '+gameRoom.roomName);

@@ -51,9 +51,9 @@ export default function QuestionDialog(props) {
         {(props.dialogTitle !== '') && <DialogTitle id="form-dialog-title">{props.dialogTitle}</DialogTitle> }
         <DialogContent>
         {(props.timerText !== '') &&
-          <DialogContentText component={'span'}   style={{fontSize:'30px'}}>
+          <DialogContentText component={'span'}  >
             <Grid container spacing={2} justify="center">
-              <Grid item xs={10}>{props.timerText}</Grid> 
+              <Grid  style={{fontSize:'25px'}} item xs={10}>{props.timerText}</Grid> 
               <Grid item xs={2}><TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} /></Grid>
             </Grid>
           </DialogContentText>

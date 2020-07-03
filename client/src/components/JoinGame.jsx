@@ -45,8 +45,7 @@ function getErrorPhrase(){
       this.socket = null; // Initialize
       this.gameConfig = {}; // The parsed config to send to Game
       this.joinGameResponseJSON = {}; // Raw JSON response from the Server create-game API
-      this.handleFormSubmit = this.handleFormSubmit.bind(this);
-      this.playerListElement = React.createRef(); // Bind to Game method for passing status
+      // this.playerListElement = React.createRef(); // Bind to Game method for passing status
 
       if(this.query.get("roomname") && this.state.player ) {
         var submission = {
@@ -62,11 +61,6 @@ function getErrorPhrase(){
     /* Sets up the socket event handlers for the Join activities */
     setUpEventHandlers(){
   
-      this.socket.on('player-change',(data) =>{
-        console.debug('JoinGame event: player-change with data: %o',data);
-        this.playerListElement.current.updatePlayers(data); // Update the child Game
-      });
-  
       /* Handle generic server error ¯\_(ツ)_/¯ */
       this.socket.on('error',(data) => {
         this.setState({joinError: true, joinErrorMsg: data.error});
@@ -80,7 +74,7 @@ function getErrorPhrase(){
     /* Function passed to JoinGameForm to accept form data to submit to backend API 
       @param joinGameData Data collected from the JoinGameForm
     */ 
-    handleFormSubmit(joinGameData){
+    handleFormSubmit = (joinGameData)=>{
       
       localStorage.setItem('player',joinGameData.player);
       this.setState({player:joinGameData.player});
@@ -124,7 +118,7 @@ function getErrorPhrase(){
         );
       } else {
         return(
-          <Game socket={this.socket} gameConfig={this.gameConfig}   ref={this.playerListElement}  />
+          <Game socket={this.socket} gameConfig={this.gameConfig}    />
         );
       }
     }

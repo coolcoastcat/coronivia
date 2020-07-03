@@ -89,7 +89,11 @@ class Game extends React.Component{
         copied: false,
         confirmCancel: false,
         confirmLeave: false,
-        alertDisconnect: false
+        alertDisconnect: false,
+        alertPlayersJoined: false,
+        playersJoined: '',
+        alertPlayersLeft: false,
+        playersLeft: ''
       };
       this.socket = props.socket;
       this.setUpEventHandlers();
@@ -117,19 +121,45 @@ class Game extends React.Component{
       }
      }
   
-     /* Method bound to CreateGame reference so that Parent can pass in updates to the playerArray and force a refresh 
-          @param playerArray The updated player array to show.
-      */
-     updatePlayers(playerArray){
-      console.debug("Game received player array update: %o",playerArray);
-  
-      this.setState({players: playerArray});
-      console.debug("updating PlayerList with %o",this.state.players);
-      if(this.playerListElement.current){
-        this.playerListElement.current.updatePlayers(this.state.players); // Update the child
+     /* Method to compare current array with new player array and show snackbar alert for adding or removing players */
+     alertPlayerChanges(currentPlayerArray,newPlayerArray){
+       console.debug('AlertPlayerChanges called with currentPlayerArray: '+JSON.stringify(currentPlayerArray)+' and newPlayerArray: '+JSON.stringify(newPlayerArray));
+
+      let i=0;
+      let addedPlayers = [];
+      for(i;i<newPlayerArray.length;i++){ 
+        let j = 0;
+        let foundPlayer = false;
+        for(j;j<currentPlayerArray.length;j++){
+          if(newPlayerArray[i].name === currentPlayerArray[j].name){
+            foundPlayer = true;
+          }
+        }
+        if(!foundPlayer){ addedPlayers.push(newPlayerArray[i].name)}
       }
-    }
+       
+      i=0;
+      let removedPlayers = [];
+      for(i;i<currentPlayerArray.length;i++){ 
+        let j = 0;
+        let foundPlayer = false;
+        for(j;j<newPlayerArray.length;j++){
+          if(currentPlayerArray[i].name === newPlayerArray[j].name){
+            foundPlayer = true;
+          }
+        }
+        if(!foundPlayer){ removedPlayers.push(currentPlayerArray[i].name)}
+      }
   
+      
+      console.debug("added players %o",addedPlayers);
+      console.debug("removed players %o",removedPlayers);
+      if(addedPlayers.length > 0){ this.setState({alertPlayersJoined: true,playersJoined: addedPlayers.join()}); }
+      if(removedPlayers.length > 0) { this.setState({alertPlayersLeft: true, playersLeft: removedPlayers.join()}); } 
+      
+    }
+
+
      setUpEventHandlers(){
       console.debug("Setting up socket.io event hanlders for socket: "+this.socket.id);
      
@@ -142,6 +172,7 @@ class Game extends React.Component{
     
       this.socket.on('player-change',(playerArray) =>{
         console.debug('Game event: player-change with data: %o',playerArray);
+        this.alertPlayerChanges(this.state.players,playerArray);
         this.setState({players: playerArray});
         if(this.playerListElement.current){
           this.playerListElement.current.updatePlayers(this.state.players); // Update the child
@@ -222,7 +253,7 @@ class Game extends React.Component{
 
     /* Called when snackbar is closed */
     handleAlertClose = () => {
-      this.setState({alertDisconnect: false});
+      this.setState({alertDisconnect: false, alertPlayersJoined: false, alertPlayersLeft: false});
     }
   
     /*Called when game is cancelled or naturally ends*/
@@ -373,6 +404,16 @@ class Game extends React.Component{
                     You are not connected to the server...trying to reconnect. Wait a moment and try again. If this persists, refresh page.
                   </Alert>
                 </Snackbar>
+                <Snackbar open={this.state.alertPlayersJoined} autoHideDuration={2000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="success">
+                    {this.state.playersJoined} joined the game.
+                  </Alert>
+                </Snackbar>
+                <Snackbar open={this.state.alertPlayersLeft} autoHideDuration={2000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="warning">
+                    {this.state.playersLeft} left the game.
+                  </Alert>
+                </Snackbar>
               </Paper>
               </Grid>
             </Grid>
@@ -383,6 +424,16 @@ class Game extends React.Component{
         return(
           <Grid container>
             <Grid item xs={12}><GamePlay gameConfig={ this.gameConfig } socket={ this.socket }  /></Grid>
+            <Snackbar open={this.state.alertPlayersJoined} autoHideDuration={2000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="success">
+                    {this.state.playersJoined} joined the game.
+                  </Alert>
+                </Snackbar>
+                <Snackbar open={this.state.alertPlayersLeft} autoHideDuration={2000} onClose={this.handleAlertClose}>
+                  <Alert onClose={this.handleAlertClose} severity="warning">
+                    {this.state.playersLeft} left the game.
+                  </Alert>
+                </Snackbar>
           </Grid>
         );
   

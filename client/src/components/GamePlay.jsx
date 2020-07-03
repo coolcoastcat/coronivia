@@ -212,7 +212,7 @@ class GamePlay extends React.Component{
             return(
                 <Box>
                     <QuestionDialog showQuestion={this.state.showQuestion} 
-                                    timerText={(this.state.timerText)? this.state.timerText: ' '} 
+                                    timerText={(this.state.timerText)? this.state.timerText: 'Answer'} 
                                     dialogTitle={this.state.questionDialogTitle} 
                                     count={(this.state.countdownData  && this.state.countdownData.count)?this.state.countdownData.count: 0}
                                     interval={this.state.interval?this.state.interval:1}
