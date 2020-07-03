@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Redirect } from 'react-router';
 import _ from 'lodash';
 
@@ -29,7 +29,7 @@ import {
 const useStyles = makeStyles((theme) => ({
   formControl: {
     margin: theme.spacing(1),
-    minWidth: 170,
+    minWidth: 250,
     maxWidth: 250
   },
   selectEmpty: {
@@ -41,7 +41,7 @@ const useStyles = makeStyles((theme) => ({
   },
   margin: {
     margin: theme.spacing(1),
-    minWidth: 120
+    minWidth: 250
   },
   colorfulButton: {
     background: 'linear-gradient(45deg, #32a852 30%, #d8e038 90%)',
@@ -128,21 +128,30 @@ const selectedCategoryIDs = [9,10,17,20,21,22,23,24];
 export function CreateGameForm(props) {
     const classes = useStyles();
 
+    // establish defaults
+    let options = { questions:5, rounds:1, difficulty:"any", owner:"", categories:selectedCategoryIDs, pauseBetweenRounds:true, questionFive:false, questionCountdown:15}
+    if(localStorage.getItem('createGameObj')){
+      options = JSON.parse(localStorage.getItem('createGameObj'));
+      console.debug("Retrieved stored options: %o ",options);
+    }
+    
+    
+
     const MAX_ROUNDS = 10;
     const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
     const SECONDS = [5,10,15,20,30];
-    const [rounds, setRounds] = React.useState(1);
-    const [difficulty, setDifficulty] = React.useState('any');
-    const [questions, setQuestions] = React.useState(5);
-    const [owner, setOwner] = React.useState('');
+    const [rounds, setRounds] = React.useState(options.rounds);
+    const [difficulty, setDifficulty] = React.useState(options.difficulty);
+    const [questions, setQuestions] = React.useState(options.questions);
+    const [owner, setOwner] = React.useState(options.owner);
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
     const [categories, setCategories] = React.useState(selectedCategoryArray);
-    const [category_ids, setCategoryIDs] = React.useState(selectedCategoryIDs);
-    const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(true);
-    const [questionFive, setQuestionFive] = React.useState(false);
-    const [countdownSeconds, setCountdownSeconds] = React.useState(15);
+    const [category_ids, setCategoryIDs] = React.useState(options.categories);
+    const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(options.pauseBetweenRounds);
+    const [questionFive, setQuestionFive] = React.useState(options.questionFive);
+    const [countdownSeconds, setCountdownSeconds] = React.useState(options.questionCountdown);
     
 
     const handlePauseChange = (event) => {
@@ -202,6 +211,7 @@ export function CreateGameForm(props) {
     }
   
     function handleSubmit(event) {
+      
       var submission = {
         questions: questions,
         rounds: rounds,
@@ -212,7 +222,8 @@ export function CreateGameForm(props) {
         questionFive: questionFive,
         questionCountdown: countdownSeconds
       };
-      console.debug("CreateGame submission: %o",submission);
+      localStorage.setItem('createGameObj',JSON.stringify(submission));
+      console.debug("CreateGame submission: "+JSON.stringify(submission));
       props.handleFormSubmit(submission);  
       event.preventDefault();
     }
@@ -286,7 +297,7 @@ export function CreateGameForm(props) {
             <Grid container>
             <Grid item xs={12}>
                 <FormControl className={classes.formControl}>
-                <InputLabel id="seconds-select-label">Question Countdown</InputLabel>
+                <InputLabel id="seconds-select-label">Question Timer</InputLabel>
                 <Select
                   labelId="seconds-select-label"
                   id="seconds-select"
@@ -379,13 +390,25 @@ export function CreateGameForm(props) {
   }
 
   export function JoinGameForm(props){
+    console.debug("%o",props);
     const classes = useStyles();
-    const [player, setPlayer] = React.useState((props.player) ? props.player : '');
+    const tmpPlayer = (props.player) ? props.player: '';
+    console.debug('Setting player to: '+tmpPlayer+ " which is of type "+typeof(tmpPlayer));
+    const [player, setPlayer] = React.useState(tmpPlayer);
+    console.debug('Player set to tmpPlayer:'+player);
     const [playerNameHelper, setPlayerHelper] = React.useState('');
     const [joinRoomHelper, setJoinRoomHelper] = React.useState('');
     const [roomname,setRoomname] = React.useState((props.roomname) ? props.roomname : '');
     const [goHome,setGoHome] = React.useState(false);
 
+    useEffect(()=>{
+      console.debug("in useEffect and about to set player to: "+props.player);
+      if(props.player){
+       setPlayer(props.player);
+      }
+    },[]);
+
+    console.debug("JoinGameForm received player: "+player);
   
     function handleRoomnameChange(event) {
       if(event.target.value.length <= 4){ 

@@ -18,7 +18,7 @@ export default function CircularProgressWithLabel(props) {
 
   return (
     <Box position="relative" display="inline-flex">
-      <CircularProgress style={colorStyle} variant="static" value={percentRemain} />
+      <CircularProgress size={30} thickness={3} style={colorStyle} variant="static" value={percentRemain} />
       <Box
         top={0}
         left={0}

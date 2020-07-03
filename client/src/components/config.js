@@ -28,6 +28,7 @@ DEV_SERVER_URI: "http://localhost:5000",
  'So say we all.',
  'By the Hammer of Grabthar!',
  'There can be only one!',
- 'Doh!'
+ 'Doh!',
+ 'This is the way.'
 ]
 }

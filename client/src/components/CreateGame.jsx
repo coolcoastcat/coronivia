@@ -47,7 +47,7 @@ export class CreateGame extends React.Component{
     this.gameConfig = {}; // The parsed config to send to Game
     this.createdGameResponseJSON = {}; // Raw JSON response from the Server create-game API
     this.handleFormSubmit = this.handleFormSubmit.bind(this);
-    this.playerListElement = React.createRef(); // Bind to Game method for passing status
+//    this.playerListElement = React.createRef(); // Bind to Game method for passing status
     this.socket = null;
 
     if(this.query.get("roomname") && this.query.get("player") &&  this.query.get("id")  ) {
@@ -61,11 +61,6 @@ setUpEventHandlers(){
 this.socket.on('game-joined',(data)=>{
 this.setState({created: true});
 console.debug("Owner: "+this.gameConfig.owner+" joined the game: "+this.gameConfig.roomname);
-});
-
-this.socket.on('player-change',(data) =>{
-console.debug('CreateGame event: player-change with data: %o',data);
-this.playerListElement.current.updatePlayers(data); // Update the child Game
 });
 
 this.socket.on('error',(data) => {
@@ -165,7 +160,7 @@ return(
 );
 } else {
 return(
-<Game gameConfig={ this.gameConfig }  ref={ this.playerListElement }  socket={ this.socket }  />
+<Game gameConfig={ this.gameConfig }    socket={ this.socket }  />
 );
 }
 }
