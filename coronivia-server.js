@@ -63,7 +63,9 @@ const gameStats = { // games stats since the server started
   categoryFrequency: { 9:0, 10:0, 15:0, 17: 0, 20:0, 21:0, 22:0, 23:0, 24:0, 31:0},
   pauseBetweenRounds: { no: 0, yes: 0},
   seconds: {5: 0,10:0, 15:0, 20:0, 30:0},
-  questionFive: {yes:0, no: 0}
+  questionFive: {yes:0, no: 0},
+  pointsCountdown: {yes:0, no: 0},
+  removeQuestions: {yes:0, no: 0}
 }; 
 
 
@@ -139,12 +141,18 @@ function handleNewSocketConnection(socket){
     let questionFive = data.questionFive ? data.questionFive : false;
     (questionFive) ? gameStats.questionFive.yes++ : gameStats.questionFive.no++;
 
+    let removeQuestions = data.removeQuestions ? data.removeQuestions : false;
+    (removeQuestions) ? gameStats.removeQuestions.yes++ : gameStats.removeQuestions.no++;
+
+    let pointsCountdown = data.pointsCountdown ? data.pointsCountdown : false;
+    (pointsCountdown) ? gameStats.pointsCountdown.yes++ : gameStats.pointsCountdown.no++;
+
       // If the categories array is empty, set the category to General by default
     let categories = (data.categories.length === 0) ? [9] : data.categories;
     categories.forEach(category =>gameStats.categoryFrequency[category]++);
 
      // create a new game room with the supplied parameters and add it to the list of games
-    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, removeQuestions, pointsCountdown,categories);
  
      gameRoomArray[game.roomName] = game;
     
@@ -659,7 +667,7 @@ function shuffle(array) {
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
 
-  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories) {
+  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,questionFive,removeQuestions, pointsCountdown, categories) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
@@ -675,6 +683,8 @@ class GameRoom{
       this.questionCountdown = questionCountdown;
       this.pauseBetweenRounds = pauseBetweenRounds;
       this.questionFive = questionFive;
+      this.removeQuestions = removeQuestions;
+      this.pointsCountdown = pointsCountdown;
 
       this.playerAnswers = {}; // populated by players emitting player-answer events for each question
 

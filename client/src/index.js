@@ -21,7 +21,7 @@ let devMsg = '';
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   devMsg = '[development]';
 }
-const VERSION = 'v0.0.9';
+const VERSION = 'v0.0.10 WIP';
 
 
 /////////////  REACT ROUTES /////////////  

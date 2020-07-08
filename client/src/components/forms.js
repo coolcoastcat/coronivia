@@ -21,6 +21,9 @@ import ExpandMoreIcon from '@material-ui/icons/ExpandMore';
 import ListItemText from '@material-ui/core/ListItemText';
 import Checkbox from '@material-ui/core/Checkbox';
 import Input from '@material-ui/core/Input';
+import Popover from '@material-ui/core/Popover';
+import CircularProgress from '@material-ui/core/CircularProgress';
+
 import {
   withStyles,
   makeStyles,
@@ -67,6 +70,9 @@ const useStyles = makeStyles((theme) => ({
   },
   fill: {
     flexGrow: 1
+  },
+  left: {
+    textAlign: 'left'
   }
 }));
 
@@ -140,7 +146,7 @@ export function CreateGameForm(props) {
     const MAX_ROUNDS = 10;
     const MAX_QUESTIONS_PER_ROUND = 10;
     const DIFFICULTIES = ["any","easy","medium","hard"];
-    const SECONDS = [5,10,15,20,30];
+    const SECONDS = [10,15,20,30];
     const [rounds, setRounds] = React.useState(options.rounds);
     const [difficulty, setDifficulty] = React.useState(options.difficulty);
     const [questions, setQuestions] = React.useState(options.questions);
@@ -152,7 +158,12 @@ export function CreateGameForm(props) {
     const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(options.pauseBetweenRounds);
     const [questionFive, setQuestionFive] = React.useState(options.questionFive);
     const [countdownSeconds, setCountdownSeconds] = React.useState(options.questionCountdown);
-    
+    const [pointsCountdown, setPointsCountdown] = React.useState(options.pointsCountdown);
+    const [removeQuestions, setRemoveQuestions] = React.useState(options.removeQuestions);
+    const [anchorEl, setAnchorEl] = React.useState(null);
+    const showSpinner = Boolean(anchorEl);
+
+
 
     const handlePauseChange = (event) => {
       console.debug("received event: %o",event.target.checked);
@@ -162,6 +173,16 @@ export function CreateGameForm(props) {
     const handleQuestionFive = (event) => {
       console.debug("received questionFive event, checked? %o",event.target.checked);
       setQuestionFive(event.target.checked);
+    };
+
+    const handleRemoveQuestions = (event) => {
+      console.debug("received removeQuestions event, checked? %o",event.target.checked);
+      setRemoveQuestions(event.target.checked);
+    };
+
+    const handlePointsCountdown = (event) => {
+      console.debug("received pointsCountdown event, checked? %o",event.target.checked);
+      setPointsCountdown(event.target.checked);
     };
 
     const handleCategoriesChange = (event) => {
@@ -211,6 +232,7 @@ export function CreateGameForm(props) {
     }
   
     function handleSubmit(event) {
+      setAnchorEl(event.currentTarget);
       
       var submission = {
         questions: questions,
@@ -220,13 +242,19 @@ export function CreateGameForm(props) {
         categories: category_ids,
         pauseBetweenRounds: pauseBetweenRounds,
         questionFive: questionFive,
-        questionCountdown: countdownSeconds
+        questionCountdown: countdownSeconds,
+        removeQuestions: removeQuestions,
+        pointsCountdown: pointsCountdown
       };
       localStorage.setItem('createGameObj',JSON.stringify(submission));
       console.debug("CreateGame submission: "+JSON.stringify(submission));
       props.handleFormSubmit(submission);  
       event.preventDefault();
     }
+
+    const handleClose = () => {
+      setAnchorEl(null);
+    };
     
     if(goHome){
       return <Redirect to="/" />;
@@ -347,14 +375,25 @@ export function CreateGameForm(props) {
                   </FormControl>
                 </Grid>
     
-              <Grid item sm={12}>
+              <Grid className={classes.left} item sm={12}>
                   <FormControlLabel
               control={<GreenCheckbox checked={pauseBetweenRounds} onChange={handlePauseChange} name="pauseBetweenRounds" />}
               label="Pause beteween rounds"
               />
-               
               </Grid>
-              <Grid item sm={12}>
+              <Grid className={classes.left} item sm={12}>
+                  <FormControlLabel
+              control={<GreenCheckbox checked={pointsCountdown} onChange={handlePointsCountdown} name="pointsCountdown" />}
+              label="Points Countdown with Timer"
+              />
+              </Grid>
+              <Grid className={classes.left} item sm={12}>
+                  <FormControlLabel
+              control={<GreenCheckbox checked={removeQuestions} onChange={handleRemoveQuestions} name="removeQuestions" />}
+              label="Remove Questions with Timer"
+              />
+              </Grid>
+              <Grid className={classes.left} item sm={12}>
                   <FormControlLabel
               control={<GreenCheckbox checked={questionFive} onChange={handleQuestionFive} name="questionFive" />}
               label="Enable Question Five"
@@ -379,6 +418,21 @@ export function CreateGameForm(props) {
                   variant="outlined" 
                   >Back</Button>
           </Box>
+          <Popover
+            id={'spinner'}
+            open={showSpinner}
+            onClose={handleClose}
+            anchorEl={anchorEl}
+            anchorOrigin={{
+              vertical: 'center',
+              horizontal: 'center',
+            }}
+            transformOrigin={{
+              vertical: 'center',
+              horizontal: 'center',
+            }}
+          ><Box p={2}>&nbsp;<br />&nbsp;<CircularProgress style={{color:'green'}} />&nbsp;<br />&nbsp;</Box>
+          </Popover>
         </Grid>
            </Grid>
         </form>
