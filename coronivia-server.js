@@ -10,6 +10,7 @@ const TriviaDB = require('./trivia-questions');
 const winston = require('winston');
 const fs = require('fs');
 
+const VERSION = 'v0.0.10';
 
 // Imports the Google Cloud client library for Winston
 const {LoggingWinston} = require('@google-cloud/logging-winston');
@@ -44,6 +45,7 @@ logger.error("winston logger.error -> coronivia-server.js log initialization tes
 logger.info("winston logger.info -> coronivia-server.js log initialization test.");
 logger.debug("winston logger.debug -> coronivia-server.js log initialization test.");
 
+logger.info("coronivia version: "+VERSION);
 
 // Some meta objects for tracking objects and data across the server
 const gameRoomArray = {}; // All games are stored here

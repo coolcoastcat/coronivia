@@ -5,6 +5,7 @@ import './index.css';
 import { Button } from "./components/Button";
 import {JoinGame } from "./components/JoinGame";
 import {CreateGame} from "./components/CreateGame";
+import config  from "./components/config";
 import InfoTwoToneIcon from '@material-ui/icons/InfoTwoTone';
 import InfoDialog from "./components/InfoDialog";
 import { green } from '@material-ui/core/colors';
@@ -17,11 +18,13 @@ import {
 } from "react-router-dom";
 import Box from '@material-ui/core/Box';
 
+
 let devMsg = '';
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   devMsg = '[development]';
 }
-const VERSION = 'v0.0.10 WIP';
+
+
 
 
 /////////////  REACT ROUTES /////////////  
@@ -136,7 +139,7 @@ class Landing extends React.Component {
            buttonStyle='btn--success--solid'>Join Game</Button>
         </Link>
         <InfoDialog open={this.state.showInfoDialog} closeCallback={this.handleCloseInfoClick} />
-        <Box p={2} style={{fontSize:'8px', color: 'white'}}>{VERSION}</Box>
+        <Box p={2} style={{fontSize:'8px', color: 'white'}}>{config.VERSION}</Box>
       </Box>
     );
   }

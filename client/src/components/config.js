@@ -1,6 +1,9 @@
 export default {
-PROD_SERVER_URI: "https://coronivia-280216.wm.r.appspot.com",
+PROD_SERVER_URI: "https://coronivia.com",
+BETA_SERVER_URI: "https://beta.coronivia.com",
 DEV_SERVER_URI: "http://localhost:5000",
+IS_BETA: true,
+VERSION: "v0.0.10 WIP",
 
  ERROR_PHRASES: ['Aww snap!',
  'Trouble down at mill!',
