@@ -3,8 +3,8 @@ import Grid from '@material-ui/core/Grid';
 import Box from '@material-ui/core/Box';
 import { green } from '@material-ui/core/colors';
 
-const label = {color: green['600'], justify: 'flex-end', fontWeight: 600,fontSize:'16px'};
-const content = {border: '1px solid lightGray', justify:"flex-start" ,fontSize:'16px'};
+const label = {color: green['600'], fontWeight: 600,fontSize:'12px'};
+const content = { paddingLeft: '5px', fontSize:'12px'};
 
 export class GameInfo extends React.Component{
     constructor(props){
@@ -32,82 +32,116 @@ export class GameInfo extends React.Component{
                 GAME INFO
                 </Grid>
 
+
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                <Box p={1}>
+                    <Box>
+                    Room Name:
+                    </Box>
+                </Grid>
+                <Grid   style={content}   container item xs={6}>
+                    <Box>
+                    {this.gameConfig.roomname}
+                    </Box>
+                </Grid>
+                <Grid justify='flex-end'  style={label}  container item xs={6}>
+                    <Box>
+                    Owner:
+                    </Box>
+                </Grid>
+                <Grid  style={content}   container item xs={6}>
+                    <Box>
+                    {this.truncatePlayerName(this.gameConfig.owner)}
+                    </Box>
+                </Grid>
+                <Grid justify='flex-end'  style={label}  container item xs={6}>
+                <Box>
                 Status:
                 </Box>
                 </Grid>
                 <Grid  style={content}   container item xs={6}>
-                <Box p={1}>
+                <Box>
                 {this.gameConfig.gameStatus}
                 </Box>
                 </Grid>
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                         Rounds:
                     </Box>
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                         {this.gameConfig.rounds}
                     </Box>
                 </Grid>
 
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     Questions per Round:
                     </Box>
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     {this.gameConfig.questions}
                     </Box>
                 </Grid>
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     Difficulty:
                     </Box>
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     {this.gameConfig.difficulty}
                     </Box>
                 </Grid>
 
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     Pause Between Rounds:
                     </Box>
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
-                    <Box p={1}>
+                    <Box >
                     {this.gameConfig.pauseBetweenRounds?'Yes':'No'}
                     </Box>
-                </Grid>
+                </Grid>  
 
-                <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
-                    Room Name:
+                 <Grid justify='flex-end'  style={label}  container item xs={6}>
+                    <Box >
+                    Points Countdown:
                     </Box>
                 </Grid>
                 <Grid   style={content}   container item xs={6}>
-                    <Box p={1}>
-                    {this.gameConfig.roomname}
+                    <Box >
+                    {this.gameConfig.pointsCountdown?'Yes':'No'}
                     </Box>
-                </Grid>
+                </Grid>          
+
                 <Grid justify='flex-end'  style={label}  container item xs={6}>
-                    <Box p={1}>
-                    Owner:
+                    <Box >
+                    Remove Questions:
                     </Box>
                 </Grid>
-                <Grid  style={content}   container item xs={6}>
-                    <Box p={1}>
-                    {this.truncatePlayerName(this.gameConfig.owner)}
+                <Grid   style={content}   container item xs={6}>
+                    <Box >
+                    {this.gameConfig.removeAnswers?'Yes':'No'}
                     </Box>
-                </Grid>            
+                </Grid>          
+                
+                <Grid justify='flex-end'  style={label}  container item xs={6}>
+                    <Box >
+                    Question Five:
+                    </Box>
+                </Grid>
+                <Grid   style={content}   container item xs={6}>
+                    <Box >
+                    {this.gameConfig.questionFive?'Yes':'No'}
+                    </Box>
+                </Grid>
+
 
             </Grid>
  

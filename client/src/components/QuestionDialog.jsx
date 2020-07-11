@@ -54,7 +54,7 @@ export default function QuestionDialog(props) {
           <DialogContentText component={'span'}  >
             <Grid container spacing={2} justify="center">
               <Grid  style={{fontSize:'25px'}} item xs={10}>{props.timerText}</Grid> 
-              <Grid item xs={2}><TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} /></Grid>
+              <Grid item xs={2}><TimerSpinner value={props.count} interval={props.interval} showTimerText={props.showSeconds} pointsCountdown={props.pointsCountdown} points={props.points} /></Grid>
             </Grid>
           </DialogContentText>
         }

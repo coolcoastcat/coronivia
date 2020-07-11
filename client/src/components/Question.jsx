@@ -10,6 +10,7 @@ import Button from '@material-ui/core/Button';
 import Box from '@material-ui/core/Box';
 import Grid from '@material-ui/core/Grid';
 import renderHTML from 'react-render-html';
+import Fade from '@material-ui/core/Fade';
 
 const questionFiveTitles = [
     "No idea.",
@@ -45,10 +46,11 @@ const questionFiveTitles = [
     "Serenity now!!"
 ]
 
-  /* Get a random funny error phrase to prefix dialogs */
-  function getQuestionFiveTitle(){
-    return questionFiveTitles[Math.floor(Math.random() * questionFiveTitles.length)];
-    }
+/* Get a random funny error phrase to prefix dialogs */
+function getQuestionFiveTitle(){
+return questionFiveTitles[Math.floor(Math.random() * questionFiveTitles.length)];
+}
+
 
 const styles = theme => ({
     root: {
@@ -143,7 +145,9 @@ class Question extends React.Component {
             totalQuestions: 0,
             disabled: true,
             randomAnswer: null,
-            randomAnswerLabel: null
+            randomAnswerLabel: null,
+            randomAnswerVisible: null,
+            answerVisible: [true,true,true,true]
 
         };
         this.radios = [];
@@ -166,14 +170,16 @@ class Question extends React.Component {
                         answer: '',
                         answerisCorrect:false, 
                         pointsEarned: 0,
-                        disabled: true}); // Reset answer state
-        this.setState({questionObject: questionJSON.question, 
+                        disabled: true,
+                        answerVisible: [true,true,true,true],
+                        questionObject: questionJSON.question, 
                         currentRoundNumber: questionJSON.currentRoundNumber,
                         questionNumber: questionJSON.questionNumber,
                         totalQuestions: questionJSON.totalQuestions,
                         showQuestion: true,
-                        randomAnswer: '',
-                        randomAnswerLabel: ''
+                        randomAnswer: null,
+                        randomAnswerLabel: '',
+                        randomAnswerVisible: true
                     });
 
         console.debug("Set question to: %o",questionJSON.question);
@@ -186,11 +192,23 @@ class Question extends React.Component {
         this.socket.on('answer',(data)=>{
             this.setState({answer:data.answer, showAnswer:true});
         });
+
+        /* Handles a request to remove an answer */
+        this.socket.on('answer-remove',(data)=>{
+            console.debug('Received event: answer-remove with data %o',data)
+            let answerVisible = this.state.answerVisible;
+            this.state.questionObject.answers.forEach((answer,idx)=>{
+                if(answer === data.removeAnswer){
+                    answerVisible[idx] = false;
+                }
+            });
+            this.setState({answerVisible: answerVisible});
+        });
     }
 
     
     handleSubmitAnswer= (event)=>{
-        this.setState({playerAnswer: event.target.value, disabled:false});
+        this.setState({playerAnswer: event.target.value, disabled:false, randomAnswerVisible: false});
         let sendData = {player: this.player, gameRoomName: this.gameRoomName, playerAnswer:event.target.value};
         console.debug("Sending answer to server: %o",sendData);
         this.socket.emit('player-answer',
@@ -207,9 +225,6 @@ class Question extends React.Component {
                                     console.error('Error from server: '+data.error)
                                 }
                             });
-        this.setState({randomAnswer:''}); // reset for questionFive option
-        this.setState({randomAnswerLabel:''});
-    
     }
 
     render(){
@@ -275,19 +290,19 @@ class Question extends React.Component {
             const qObj = this.state.questionObject;
             if(qObj.answers){
 
-                this.radios = qObj.answers.map((answer)=> {
+                this.radios = qObj.answers.map((answer,idx)=> {
                     let style = (this.state.playerAnswer && this.state.playerAnswer === answer) ? classes.sent:classes.notsent;
-                     return <FormControlLabel className={style}  key={answer} value={answer} control={<Radio  color="primary" />} label={renderHTML(answer)} color="primary" />
-                    }
+                        return <Fade in={this.state.answerVisible[idx]} key={idx}><FormControlLabel className={style}  value={answer} control={<Radio  color="primary" />} label={renderHTML(answer)} color="primary" /></Fade>
+                }
                 );
-
-                if(this.questionFive && !this.state.submittedAnswer){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
-                    if(!this.state.randomAnswer || this.state.randomAnswer === ''){ // if a random answer hasn't been initialized, do so
+                if(this.questionFive){ // select a random answer from the qObj.answers array and assign it as the value for a questionFive
+                    
+                    if(!this.state.randomAnswer || this.state.randomAnswerLabel === ''){ // if a random answer hasn't been initialized, do so
                         this.setState({randomAnswerLabel: getQuestionFiveTitle()});
                         this.setState({randomAnswer: qObj.answers[Math.floor(Math.random() * qObj.answers.length)] });
                     }
                     // For every state refresh, re-add this option to the answer array
-                    this.radios.push(<FormControlLabel  key={'rand_'+this.state.randomAnswer} value={this.state.randomAnswer} control={<Radio  color="primary" />} label={this.state.randomAnswerLabel} color="primary" />);
+                    this.radios.push(<Fade in={this.state.randomAnswerVisible} key={'rand_'+this.state.randomAnswer}><FormControlLabel value={this.state.randomAnswer} control={<Radio  color="primary" />} label={this.state.randomAnswerLabel} color="primary" /></Fade>);
                 }
             }
             return(

@@ -78,7 +78,7 @@ joinGame(roomname,player,ownerID){
     this.setupSocket();
   }
   this.socket.emit('join',{roomname: roomname, player: player},(data)=>{
-    console.log('DEBUG CreatGame.joinGame(): owner joined game with data: %o',data);
+    console.debug('DEBUG CreatGame.joinGame(): owner joined game with data: %o',data);
     if(data.success){
       this.gameConfig = data;
       this.gameConfig.ownerID = ownerID;
@@ -159,6 +159,7 @@ return(
 <CreateGameForm handleFormSubmit={this.handleFormSubmit} />
 );
 } else {
+  console.debug("SENDING IN CONFIG %o",this.gameConfig);
 return(
 <Game gameConfig={ this.gameConfig }    socket={ this.socket }  />
 );

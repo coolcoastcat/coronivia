@@ -73,6 +73,9 @@ const useStyles = makeStyles((theme) => ({
   },
   left: {
     textAlign: 'left'
+  },
+  boxWidth: {
+    maxWidth:500
   }
 }));
 
@@ -159,7 +162,7 @@ export function CreateGameForm(props) {
     const [questionFive, setQuestionFive] = React.useState(options.questionFive);
     const [countdownSeconds, setCountdownSeconds] = React.useState(options.questionCountdown);
     const [pointsCountdown, setPointsCountdown] = React.useState(options.pointsCountdown);
-    const [removeQuestions, setRemoveQuestions] = React.useState(options.removeQuestions);
+    const [removeAnswers, setRemoveAnswers] = React.useState(options.removeAnswers);
     const [anchorEl, setAnchorEl] = React.useState(null);
     const showSpinner = Boolean(anchorEl);
 
@@ -175,9 +178,9 @@ export function CreateGameForm(props) {
       setQuestionFive(event.target.checked);
     };
 
-    const handleRemoveQuestions = (event) => {
-      console.debug("received removeQuestions event, checked? %o",event.target.checked);
-      setRemoveQuestions(event.target.checked);
+    const handleRemoveAnswers = (event) => {
+      console.debug("received removeAnswers event, checked? %o",event.target.checked);
+      setRemoveAnswers(event.target.checked);
     };
 
     const handlePointsCountdown = (event) => {
@@ -243,7 +246,7 @@ export function CreateGameForm(props) {
         pauseBetweenRounds: pauseBetweenRounds,
         questionFive: questionFive,
         questionCountdown: countdownSeconds,
-        removeQuestions: removeQuestions,
+        removeAnswers: removeAnswers,
         pointsCountdown: pointsCountdown
       };
       localStorage.setItem('createGameObj',JSON.stringify(submission));
@@ -261,7 +264,7 @@ export function CreateGameForm(props) {
     }
 
       return (
-        <Box   p={2} >
+        <Box className={classes.boxWidth}   p={2} >
         <Box >Create A Game</Box>
 
         <Paper>
@@ -389,8 +392,8 @@ export function CreateGameForm(props) {
               </Grid>
               <Grid className={classes.left} item sm={12}>
                   <FormControlLabel
-              control={<GreenCheckbox checked={removeQuestions} onChange={handleRemoveQuestions} name="removeQuestions" />}
-              label="Remove Questions with Timer"
+              control={<GreenCheckbox checked={removeAnswers} onChange={handleRemoveAnswers} name="removeAnswers" />}
+              label="Remove Answers with Timer"
               />
               </Grid>
               <Grid className={classes.left} item sm={12}>

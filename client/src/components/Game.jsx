@@ -42,6 +42,9 @@ const styles = theme => ({
   }, 
   mainGrid: {
     padding: theme.spacing(2)
+  },
+  boxWidth: {
+    maxWidth:500
   }
 });
 
@@ -108,14 +111,14 @@ class Game extends React.Component{
 
    componentDidMount() {
       window.addEventListener("beforeunload", this.onUnload);
-      console.log("Game componentDidMount");
+      console.debug("Game componentDidMount");
    }
 
 
      /* Clean up once the game is unmounted */
      componentWillUnmount() {
       window.removeEventListener("beforeunload", this.onUnload);
-      console.log('Closing game socket on Game componentWillUnmount');
+      console.debug('Closing game socket on Game componentWillUnmount');
       if(this.socket.connected){
         this.socket.close();
       }
@@ -372,7 +375,7 @@ class Game extends React.Component{
       switch(this.state.gameStatus){
         case 'WAITING':
           return(
-            <Grid   justify="center" container>
+            <Grid className={classes.boxWidth}  justify="center" container>
               <Grid item sm={12}>
                 <h2>{ headerMessage }</h2>
               </Grid>
@@ -385,13 +388,13 @@ class Game extends React.Component{
               <Box p={2}>{waitingButtons}</Box>
               <Grid justify="center" container>
                 
-              <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={6}>
+              <Grid  style={{ padding: '5px', flexGrow: 1}} item sm={12}>
                   <Paper  elevation={3}>
                     <Box  p={1} ><PlayerListScores thisPlayer={ this.gameConfig.player } players={ this.state.players } ref={ this.playerListElement } /></Box>
                   </Paper>
                 </Grid>
 
-                <Grid item sm={6}  style={{ padding: '5px'}} >
+                <Grid item sm={12}  style={{ padding: '5px'}} >
                   <Paper elevation={3}>
                     <Box p={1}><GameInfo gameConfig={ this.gameConfig } handleStartGame={ this.handleStartGame } /></Box>
                   </Paper>
