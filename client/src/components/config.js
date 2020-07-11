@@ -3,7 +3,7 @@ PROD_SERVER_URI: "https://coronivia.com",
 BETA_SERVER_URI: "https://beta-dot-coronivia-280216.wm.r.appspot.com/",
 DEV_SERVER_URI: "http://localhost:5000",
 IS_BETA: true,
-VERSION: "v0.0.10 WIP",
+VERSION: "v0.0.10",
 
  ERROR_PHRASES: ['Aww snap!',
  'Trouble down at mill!',

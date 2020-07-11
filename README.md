@@ -45,10 +45,12 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
 __v0.0.10 - Current__
 
 Bug fixes
-* #[](https://github.com/coolcoastcat/coronivia/issues/) - 
+* #[27](https://github.com/coolcoastcat/coronivia/issues/72) - Categories don't show as selected correctly on load of localStorage
 
 Enhancements
-* #[](https://github.com/coolcoastcat/coronivia/issues/) - 
+* #[49](https://github.com/coolcoastcat/coronivia/issues/49) - Implement a score based on the timer
+* #[69](https://github.com/coolcoastcat/coronivia/issues/69) - Show a create game spinner
+* #[73](https://github.com/coolcoastcat/coronivia/issues/73) - Questions disappear on timer countdown
 
 
 Known Issues
