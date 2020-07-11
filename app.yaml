@@ -1,5 +1,5 @@
 runtime: nodejs12
-service: beta
+service: default
 
 env_variables:
   DEBUG: "error*,-fatal"
