@@ -42,7 +42,8 @@ class GamePlay extends React.Component{
             leaveGame: false,
             interval: null,
             showSeconds: false,
-            gameEnded: false
+            gameEnded: false,
+            points: null
         }
         this.winningPlayerArray = [];
         this.setUpEventHandlers();
@@ -83,7 +84,7 @@ class GamePlay extends React.Component{
         */
         this.socket.on('countdown-question',(data) =>{
             console.debug('countdown-question event: %o',data);
-            this.setState({countdownData: data,timerText: data.timerMessage, interval:data.interval, showSeconds:data.showCountdown});
+            this.setState({countdownData: data,timerText: data.timerMessage, points: data.points, interval:data.interval, showSeconds:data.showCountdown});
         });
 
             /* General handler for countdown answer timers received from the server.
@@ -170,12 +171,12 @@ class GamePlay extends React.Component{
             this.state.showQuestion+" showEndgame: "+this.state.showEndgame+ " leaveGame: "+this.state.leaveGame);
 
        if(this.state.leaveGame){
-            console.log("GamePlay player "+this.gameConfig.player+" is leaving game "+this.gameConfig.roomname);
+            console.debug("GamePlay player "+this.gameConfig.player+" is leaving game "+this.gameConfig.roomname);
             return <Redirect to='/' />
         }
 
         let pauseBetweenRoundContent = '';
-        console.log("this.state.gameEnded: "+this.state.gameEnded+ " this.gameConfig.pauseBetweenRounds: %o",this.gameConfig.pauseBetweenRounds);
+
         if(this.gameConfig.pauseBetweenRounds && !this.state.endGame && !this.state.countdownData){
             pauseBetweenRoundContent = (!this.gameConfig.ownerID) ? <Box m={2}>Waiting for room owner to continue to the next round...</Box>:
                                                                         <Box m={2}> 
@@ -219,6 +220,8 @@ class GamePlay extends React.Component{
                                     showTimerText={true}
                                     showSeconds={this.state.showSeconds}
                                     leaveCallback={this.handleLeaveGame}
+                                    pointsCountdown={this.gameConfig.pointsCountdown}
+                                    points={this.state.points}
                                     >
                         <Question gameRoomName={this.gameConfig.roomname} 
                                     thisPlayer={this.gameConfig.player} 

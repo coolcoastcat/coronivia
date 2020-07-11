@@ -10,6 +10,7 @@ const TriviaDB = require('./trivia-questions');
 const winston = require('winston');
 const fs = require('fs');
 
+const VERSION = 'v0.0.10';
 
 // Imports the Google Cloud client library for Winston
 const {LoggingWinston} = require('@google-cloud/logging-winston');
@@ -44,6 +45,7 @@ logger.error("winston logger.error -> coronivia-server.js log initialization tes
 logger.info("winston logger.info -> coronivia-server.js log initialization test.");
 logger.debug("winston logger.debug -> coronivia-server.js log initialization test.");
 
+logger.info("coronivia version: "+VERSION);
 
 // Some meta objects for tracking objects and data across the server
 const gameRoomArray = {}; // All games are stored here
@@ -63,7 +65,9 @@ const gameStats = { // games stats since the server started
   categoryFrequency: { 9:0, 10:0, 15:0, 17: 0, 20:0, 21:0, 22:0, 23:0, 24:0, 31:0},
   pauseBetweenRounds: { no: 0, yes: 0},
   seconds: {5: 0,10:0, 15:0, 20:0, 30:0},
-  questionFive: {yes:0, no: 0}
+  questionFive: {yes:0, no: 0},
+  pointsCountdown: {yes:0, no: 0},
+  removeAnswers: {yes:0, no: 0}
 }; 
 
 
@@ -139,17 +143,24 @@ function handleNewSocketConnection(socket){
     let questionFive = data.questionFive ? data.questionFive : false;
     (questionFive) ? gameStats.questionFive.yes++ : gameStats.questionFive.no++;
 
+    let removeAnswers = data.removeAnswers ? data.removeAnswers : false;
+    (removeAnswers) ? gameStats.removeAnswers.yes++ : gameStats.removeAnswers.no++;
+
+    let pointsCountdown = data.pointsCountdown ? data.pointsCountdown : false;
+    (pointsCountdown) ? gameStats.pointsCountdown.yes++ : gameStats.pointsCountdown.no++;
+
       // If the categories array is empty, set the category to General by default
     let categories = (data.categories.length === 0) ? [9] : data.categories;
     categories.forEach(category =>gameStats.categoryFrequency[category]++);
 
      // create a new game room with the supplied parameters and add it to the list of games
-    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories);
+    let game = new GameRoom(owner,rounds,questionsPerRound,difficulty,questionCountdown,pauseBetweenRounds,questionFive, removeAnswers, pointsCountdown,categories);
  
      gameRoomArray[game.roomName] = game;
     
      logger.info("Game created -> roomname: "+game.roomName+" owner: "+game.owner+" rounds: "+game.rounds+" qs/rnd: "+game.questionCount+
-                    " difficulty: "+game.difficulty+ " pauseBetweenRounds: "+game.pauseBetweenRounds+" questionFive: "+game.questionFive);
+                    " difficulty: "+game.difficulty+ " pauseBetweenRounds: "+game.pauseBetweenRounds+" points countdown: "+game.pointsCountdown+
+                    " remove question with timer: "+game.removeAnswers+" questionFive: "+game.questionFive);
      callback({ success: true, 
                 gameStatus: 'WAITING',
                 rounds: game.rounds, 
@@ -160,6 +171,8 @@ function handleNewSocketConnection(socket){
                 player: owner,
                 ownerID: game.ownerID,
                 pauseBetweenRounds: game.pauseBetweenRounds,
+                removeAnswers: game.removeAnswers,
+                pointsCountdown: game.pointsCountdown,
                 questionFive: game.questionFive,
                 players: [] });
      });
@@ -202,6 +215,8 @@ function handleNewSocketConnection(socket){
                             gameStatus: game.gameStatus,
                             ownerID: (data.player === game.owner)? game.ownerID : null,
                             pauseBetweenRounds: game.pauseBetweenRounds,
+                            removeAnswers: game.removeAnswers,
+                            pointsCountdown: game.pointsCountdown,                            
                             questionFive: game.questionFive,
                             players: game.getPlayerInfo()
         }
@@ -377,11 +392,12 @@ function handleNewSocketConnection(socket){
       let currentQuestion = currentRoundObj.getCurrentQuestion();
       if(currentQuestion){
         logger.debug("Game "+gameRoom.roomName+" player-answer ->  player: "+ data.player + " answered "+data.playerAnswer+" correct answer is "+currentQuestion.correctAnswer);
-        gameRoom.playerAnswers[data.player] = data.playerAnswer;
+        
         if(data.playerAnswer === currentQuestion.correctAnswer) {
-          let points = currentQuestion.questionData.pointValue;
+          let points = gameRoom.currentQuestionPoints;
           pointsEarned = points;
         }
+        gameRoom.playerAnswers[data.player] = { answer: data.playerAnswer, pointsEarned: pointsEarned };
 
         callback({success: true, points: pointsEarned});
       } else {
@@ -486,8 +502,23 @@ function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback
   
   logger.debug('DEBUG: createTimer() called with roomName: ' + roomName + ' secs: '+ secs + ' event: '+event+ ' message: '+ message + ' gameRoom object with owner: '+ gameRoom.owner + ' callback: '+callback.name );
   let interval = secs; // Used for calculating the % time remaining on the client side
+  let points = 0;
   let timer = setInterval(()=>{
-    io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
+    
+    // handle the special case of the countdown-question timer
+    if(event === 'countdown-question'){
+      if(gameRoom.removeAnswers){
+        gameRoom.checkRemoveAnswer(secs,interval);
+      }  
+      // only update the points if option is selected and every 2 seconds
+        if(gameRoom.pointsCountdown && secs % 2 === 0){
+          points = gameRoom.calculatePoints(secs,interval);
+        }
+        io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval, points: points});
+    } else {
+        io.to(roomName).emit(event,{ count: secs, timerMessage: message, showCountdown: showCountdown, interval: interval }); // Update all the scores
+    }
+
     secs--;
     if(secs == -2){
       clearInterval(timer);
@@ -496,6 +527,7 @@ function createTimer(roomName,secs,event,message,showCountdown,gameRoom,callback
     }
   },1000);
 }
+
 
 
 
@@ -659,7 +691,7 @@ function shuffle(array) {
 /* The GameRoom class encapsulates all the aspects and attributes of the game room */
 class GameRoom{
 
-  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,questionFive, categories) {
+  constructor(owner,rounds,questionCount,difficulty,questionCountdown,pauseBetweenRounds,questionFive,removeAnswers, pointsCountdown, categories) {
       this.TRIVIA_URI =  "https://opentdb.com/api.php";
       this.owner = owner;
       this.ownerID = this.createOwnerID();
@@ -675,6 +707,9 @@ class GameRoom{
       this.questionCountdown = questionCountdown;
       this.pauseBetweenRounds = pauseBetweenRounds;
       this.questionFive = questionFive;
+      this.removeAnswers = removeAnswers;
+      this.pointsCountdown = pointsCountdown;
+      this.currentQuestionPoints = 0;
 
       this.playerAnswers = {}; // populated by players emitting player-answer events for each question
 
@@ -694,6 +729,54 @@ class GameRoom{
         }
     });
     return hasConnected;
+  }
+
+
+  /* 
+    Calculates the points to send to clients based on game options and the current countdown.  Game options
+    that are evaluated are this.pointsCountdown and this.getCurrentRound().getCurrentQuestion().questionData.pointValue
+    @param secs The number of seconds remaining on the timer
+    @param interval The countdown interval
+    @returns An integer with the points
+  */
+  calculatePoints(secs,interval){
+   let calculatedPoints = 0;
+    if(!this.getCurrentRound().getCurrentQuestion()){ // we are between rounds, why are we being called?
+      logger.error('No current question exists. Not sure why we are trying to calculate points...returning 0')
+
+    } else {
+      calculatedPoints = this.getCurrentRound().getCurrentQuestion().questionData.pointValue;
+      if(this.pointsCountdown) { 
+        const pointPercentage = secs/interval;
+        calculatedPoints = Math.round(calculatedPoints * pointPercentage);
+      }
+    }
+    this.currentQuestionPoints = calculatedPoints;
+    return calculatedPoints;
+
+  }
+
+  /*
+    Check if it's time to emit an event to tell clients to erase an incorrect question. Questions to be erased at 50% and 25% time remaining
+    @param secs The number of seconds remaining on the timer
+    @param interval The countdown interval
+    @emits question-remove
+  */
+  checkRemoveAnswer(secs,interval){
+    if(this.getCurrentRound().getCurrentQuestion().questionData.type === 'boolean') { return; } // don't remove for True/False
+    
+    const removeIntervals = { 10: { half: 6, quarter: 3}, 
+                              15: { half: 8, quarter: 4},
+                              20: { half: 11, quarter: 6},
+                              30: { half: 16, quarter: 9} 
+                            };
+
+    if(removeIntervals[interval].half === secs || removeIntervals[interval].quarter === secs){
+      logger.debug("remove answer triggered at seconds: "+secs);
+      let removeThisAnswer = this.getCurrentRound().getCurrentQuestion().questionData.incorrect_answers.pop();
+      logger.debug("calling clients to remove answer: "+ removeThisAnswer);
+      io.to(this.roomName).emit('answer-remove',{'removeAnswer': removeThisAnswer});
+    }
   }
 
 
@@ -849,11 +932,14 @@ class GameRoom{
     questionNumber++; // For labeling
     this.playerAnswers = {}; // reset the answer object
 
-    let questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
+    const questionTitle = 'Question '+questionNumber+' of '+totalQuestions;
+    const questionData = Object.assign({}, question.questionData);
+    delete questionData.incorrect_answers;
+    
     let data = { currentRoundNumber: currentRoundNumber, 
                   questionNumber: questionNumber, 
                   totalQuestions: totalQuestions, 
-                  question: question.questionData, 
+                  question: questionData, 
                   timerMessage: questionTitle
                 };
     logger.debug("Room "+ this.roomName + ": sending round "+currentRoundNumber+" of "+this.rounds+", question "+questionNumber+" of "+totalQuestions);
@@ -872,7 +958,7 @@ class GameRoom{
     
     try {
       for(const player in this.playerAnswers){
-        let points = (this.playerAnswers[player]  === currentQuestion.correctAnswer) ? currentQuestion.questionData.pointValue : 0;
+        let points = this.playerAnswers[player].pointsEarned;
         this.getPlayer(player).updateScore(points);
         logger.debug("Player: "+player+" earned: "+points+" for game: "+this.roomName+" R"+currentRoundObj.roundNumber+"Q"+questionNumber);
       } 
@@ -1024,7 +1110,7 @@ class Round {
    opentdb.com and parses it into a format that can be queried and sent to clients */
 class Question{
   constructor(questionJSON){
-    let pointValuesObj = {easy: 10, medium: 30, hard: 50};
+    let pointValuesObj = {easy: 10, medium: 20, hard: 30};
 
     this.correctAnswer = questionJSON.correct_answer;
     this.questionData ={
@@ -1034,11 +1120,13 @@ class Question{
       difficulty: questionJSON.difficulty,
       question: questionJSON.question,
       answers: questionJSON.incorrect_answers,
+      incorrect_answers: shuffle([...questionJSON.incorrect_answers]),
       pointValue: pointValuesObj[questionJSON.difficulty]
     };
     this.questionData.answers.push(this.correctAnswer);
     this.questionData.answers = shuffle(this.questionData.answers);
 
+   
   }
 
 }

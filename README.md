@@ -40,8 +40,23 @@ Coronivia is a game for 1 to 1 million players (might need some load testing and
 
     Join a game allows a user to enter a four character Join Game Code to enter a non-started game. Players are prompted for their player name and are then placed in the waiting room.
 
+
 ## Releases
-__v0.0.9 - Current__
+__v0.0.10 - Current__
+
+Bug fixes
+* #[27](https://github.com/coolcoastcat/coronivia/issues/72) - Categories don't show as selected correctly on load of localStorage
+
+Enhancements
+* #[49](https://github.com/coolcoastcat/coronivia/issues/49) - Implement a score based on the timer
+* #[69](https://github.com/coolcoastcat/coronivia/issues/69) - Show a create game spinner
+* #[73](https://github.com/coolcoastcat/coronivia/issues/73) - Questions disappear on timer countdown
+
+
+Known Issues
+* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
+
+__v0.0.9__
 
 Bug fixes
 * #[64](https://github.com/coolcoastcat/coronivia/issues/64) - Fix Question dialogs so titles don't bounce around.
@@ -53,8 +68,6 @@ Enhancements
 * #[63](https://github.com/coolcoastcat/coronivia/issues/63) - Leave answers showing when submitting
 * #[66](https://github.com/coolcoastcat/coronivia/issues/66) - Sticky Options
 
-Known Issues
-* [Issues List](https://github.com/coolcoastcat/coronivia/projects/1?card_filter_query=label%3Abug)
 
 __v0.0.8__
 

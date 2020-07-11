@@ -6,11 +6,18 @@ import Box from '@material-ui/core/Box';
 
 export default function CircularProgressWithLabel(props) {
   console.debug("Props: %o",props);
-  const percentRemain = (props.interval && props.value)? (props.value / props.interval) * 100 : 0;
+  let percentRemain = (props.interval && props.value)? (props.value / props.interval) * 100 : 0;
+  if (percentRemain < 0) { percentRemain = 0;}
+
   const currentCount = (props.value && props.value < 0) ? 0 : props.value;
-  
-  const countText = (props.showTimerText && currentCount)? Math.round(currentCount)+'s' : '';
-  let colorStyle = (props.showTimerText) ? {color: 'green'} : {color: 'blue'};
+  let countText = '';
+  if(props.pointsCountdown){
+    countText = (props.points)? props.points+'p': '';
+  } else {
+    countText = (props.showTimerText && currentCount)? Math.round(currentCount)+'s' : '';
+  }
+    let colorStyle = (props.showTimerText) ? {color: 'green'} : {color: 'blue'};
+
 
   if(props.showTimerText && percentRemain < 50){
     colorStyle = (percentRemain > 25) ?  {color: '#FFD700'} :  {color: '#B22222'};  

@@ -9,9 +9,14 @@ import config  from "./config";
 let SERVER_URI = null;
 if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
   SERVER_URI = config.DEV_SERVER_URI;
+} else if(config.IS_BETA) {
+  SERVER_URI = config.BETA_SERVER_URI;
 } else {
   SERVER_URI = config.PROD_SERVER_URI;
 }
+
+console.debug("Is Beta: "+config.IS_BETA);
+console.debug("Connecting to SERVER_URI: "+SERVER_URI);
 
 /* Scrape the query params
 */
