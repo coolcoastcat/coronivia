@@ -138,7 +138,7 @@ export function CreateGameForm(props) {
     const classes = useStyles();
 
     // establish defaults
-    let options = { questions:5, rounds:1, difficulty:"any", owner:"", categories:selectedCategoryIDs, pauseBetweenRounds:true, questionFive:false, questionCountdown:15}
+    let options = { questions:5, rounds:1, difficulty:"any", owner:"", categoryTitles: selectedCategoryArray, categories:selectedCategoryIDs, pauseBetweenRounds:true, questionFive:false, questionCountdown:15}
     if(localStorage.getItem('createGameObj')){
       options = JSON.parse(localStorage.getItem('createGameObj'));
       console.debug("Retrieved stored options: %o ",options);
@@ -156,7 +156,7 @@ export function CreateGameForm(props) {
     const [owner, setOwner] = React.useState(options.owner);
     const [goHome,setGoHome] = React.useState(false);
     const [ownerNameHelper, setOwnerHelper] = React.useState('');
-    const [categories, setCategories] = React.useState(selectedCategoryArray);
+    const [categories, setCategories] = React.useState((options.categoryTitles)?options.categoryTitles:selectedCategoryArray);
     const [category_ids, setCategoryIDs] = React.useState(options.categories);
     const [pauseBetweenRounds, setPauseBetweenRounds] = React.useState(options.pauseBetweenRounds);
     const [questionFive, setQuestionFive] = React.useState(options.questionFive);
@@ -247,9 +247,12 @@ export function CreateGameForm(props) {
         questionFive: questionFive,
         questionCountdown: countdownSeconds,
         removeAnswers: removeAnswers,
-        pointsCountdown: pointsCountdown
+        pointsCountdown: pointsCountdown,
       };
-      localStorage.setItem('createGameObj',JSON.stringify(submission));
+      var storage =  Object.assign({},submission);
+      storage.categoryTitles = categories;
+
+      localStorage.setItem('createGameObj',JSON.stringify(storage));
       console.debug("CreateGame submission: "+JSON.stringify(submission));
       props.handleFormSubmit(submission);  
       event.preventDefault();
