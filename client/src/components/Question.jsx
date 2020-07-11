@@ -202,7 +202,7 @@ class Question extends React.Component {
                     answerVisible[idx] = false;
                 }
             });
-            this.setState({answerVisible: answerVisible});
+            this.setState({answerVisible: answerVisible,randomAnswerVisible: false});
         });
     }
 

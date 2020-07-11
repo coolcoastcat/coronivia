@@ -16,6 +16,10 @@ if (!process.env.NODE_ENV || process.env.NODE_ENV === 'development') {
 }
 
 
+console.debug("Is Beta: "+config.IS_BETA);
+console.debug("Connecting to SERVER_URI: "+SERVER_URI);
+
+
 /* Scrape the query params
 */
 function useQuery() {
