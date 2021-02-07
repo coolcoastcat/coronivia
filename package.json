@@ -23,7 +23,7 @@
     "body-parser": "^1.18.3",
     "cors": "^2.8.5",
     "express": "^4.16.4",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "pouchdb": "^7.2.1",
     "pouchdb-find": "^7.2.1",
     "socket.io": "^2.4.0",
