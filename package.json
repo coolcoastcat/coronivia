@@ -26,7 +26,7 @@
     "node-fetch": "^3.1.1",
     "pouchdb": "^7.2.1",
     "pouchdb-find": "^7.2.1",
-    "socket.io": "^2.4.0",
+    "socket.io": "^2.5.0",
     "uuid": "^8.1.0",
     "winston": "^3.3.3"
   },
